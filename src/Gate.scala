@@ -10,6 +10,26 @@ import java.net.Socket
  */
 
 class Gate extends Actor {
+  import Queries._
 
+  def answer(a: Actor)(f: => Any) {
+    actor {
+      a ! f
+    }
+  }
 
+  def act {
+    loop {
+      react {
+        //pozadavek o aktualizaci textu v kanalu
+        case ChannelTextRefresh(ch) => answer(sender) {
+          LideAPI.users(ch) match {
+            case Some(list) => list
+            case None => println("Nepodarilo se nacist zpravy z kanalu: "+ch.name)
+          }
+        }
+
+      }
+    }
+  }
 }

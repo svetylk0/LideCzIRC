@@ -16,11 +16,10 @@ import java.net.Socket
 class Client(val socket: Socket) extends Actor {
   import Globals._
 
-  private val reader = new BufferedReader(InputStreamReader(socket.getInputStream, encoding))
-  private val writer = new BufferedWriter(OutputStreamWriter(socket.getOutputStream, encoding))
-  private val threadRunner = new ThreadRunner
+  val reader = new BufferedReader(InputStreamReader(socket.getInputStream, encoding))
+  val writer = new BufferedWriter(OutputStreamWriter(socket.getOutputStream, encoding))
 
-  protected val channels = List[Channel]()
+  val channels = List[Channel]()
 
   def dispose {
     exit
@@ -41,8 +40,5 @@ class Client(val socket: Socket) extends Actor {
       else Gate ! line
     }
   }
-
-  //aa aa
-
 
 }

@@ -7,4 +7,13 @@
  * To change this template use File | Settings | File Templates.
  */
 
-class LideAPI
+object LideAPI {
+  import Queries._
+
+  def users(ch: Channel): Option[List[User]] = {
+    Some(List(User("pan1",Male,Ordinary),
+    User("adminka",Female,Admin),
+    User("DS",Male,DS),
+    User("SSka",Female,SS)))
+  }
+}
