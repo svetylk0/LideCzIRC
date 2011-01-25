@@ -19,5 +19,5 @@ trait Gender
 object Male extends Gender
 object Female extends Gender
 
-case class User(val nick: String, val gender: Gender, val mod: Privilege)
+case class User(val nick: String, val gender: Gender, var mod: Privilege = Ordinary)
 

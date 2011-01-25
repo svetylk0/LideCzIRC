@@ -8,6 +8,11 @@
  */
 
 object Queries {
-  case class ChannelTextRefresh(channel: Channel)
+  //dotazy, ktere posila Channel na Gate
+  case class ChannelMessagesRefresh(channel: Channel)
+  case class ChannelUsersRefresh(channel: Channel)
+
+  //odpovedi, ktere dostava Channel od Gate
   case class ChannelUsers(users: List[User])
+  case class ChannelMessages(users: List[Message])
 }

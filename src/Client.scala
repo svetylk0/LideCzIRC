@@ -25,12 +25,25 @@ class Client(val socket: Socket) extends Actor {
     exit
   }
 
-  def write(data: String) {
-    writer.write(data)
-    writer.flush
+  def disposeOnException[A](f: => A) {
+    try {
+      f
+    } catch {
+      case e: Exception => e.printStackTrace
+                           dispose
+    }
   }
 
-  def read = reader.readLine
+  def write(data: String) {
+    disposeOnException {
+      writer.write(data)
+      writer.flush
+    }
+  }
+
+  def read = disposeOnException {
+    reader.readLine
+  }
 
   //cteni vstupu klienta a preposilani  Gate
   threadRunner execute {
@@ -38,6 +51,15 @@ class Client(val socket: Socket) extends Actor {
       val line = read
       if (line == null) dispose
       else Gate ! line
+    }
+  }
+
+  //reakce na prichozi zpravy z Gate
+  def act {
+    loop {
+      react {
+
+      }
     }
   }
 

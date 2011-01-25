@@ -9,26 +9,32 @@ import java.net.Socket
  * To change this template use File | Settings | File Templates.
  */
 
-class Gate extends Actor {
+object Gate extends Actor {
+
   import Queries._
 
   def answer(a: Actor)(f: => Any) {
-    actor {
+    actor{
       a ! f
     }
   }
 
   def act {
-    loop {
-      react {
-        //pozadavek o aktualizaci textu v kanalu
-        case ChannelTextRefresh(ch) => answer(sender) {
-          LideAPI.users(ch) match {
-            case Some(list) => list
-            case None => println("Nepodarilo se nacist zpravy z kanalu: "+ch.name)
-          }
-        }
+    loop{
+      react{
+        //String raw zprava od klienta
+        case line: String =>
 
+        //pozadavek o aktualizaci textu v kanalu
+        case ChannelMessagesRefresh(ch) =>
+          answer(sender) {
+            LideAPI.users(ch) match {
+              case Some(list) => ChannelUsers(list)
+              case None => println("Nepodarilo se nacist zpravy z kanalu: " + ch.name)
+            }
+          }
+
+        case _ => //vse ostatni zahodit
       }
     }
   }
