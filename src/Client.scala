@@ -50,7 +50,7 @@ class Client(val socket: Socket) extends Actor {
     loop {
       val line = read
       if (line == null) dispose
-      else Gate ! line
+      else Gate ! ((this,line))
     }
   }
 
