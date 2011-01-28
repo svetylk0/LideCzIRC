@@ -2,7 +2,7 @@
 
 /**
  * Created by IntelliJ IDEA.
- * User: hacx
+ * Author: svetylk0@seznam.cz
  * Date: 25.1.11
  * Time: 18:14
  * To change this template use File | Settings | File Templates.

@@ -3,7 +3,7 @@ import actors.Actor._
 
 /**
  * Created by IntelliJ IDEA.
- * User: hacx
+ * Author: svetylk0@seznam.cz
  * Date: 24.1.11
  * Time: 14:40
  * To change this template use File | Settings | File Templates.

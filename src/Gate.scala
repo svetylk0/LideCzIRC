@@ -4,7 +4,7 @@ import java.net.Socket
 
 /**
  * Created by IntelliJ IDEA.
- * User: hacx
+ * Author: svetylk0@seznam.cz
  * Date: 24.1.11
  * Time: 14:07
  * To change this template use File | Settings | File Templates.
@@ -20,26 +20,6 @@ object Gate extends Actor {
 
   import Queries._
   import Commands._
-  import collection.mutable
-
-  //zde budeme uchovavat stavove veliciny klienta
-  val clientStates = mutable.Map[Client,ClientState]()
-
-  def getClientState(c: Client) = clientStates.lift(c) match {
-    case Some(x) => x
-    case None =>
-      val nstate = new ClientState
-      clientStates += c->nstate
-      nstate
-  }
-
-  def getNickName(c: Client) = getClientState(c).login
-
-  def answer[A <: Response](a: OutputChannel[A])(f: => A) {
-    actor{
-      a ! f
-    }
-  }
 
   def act {
     loop{
@@ -57,45 +37,27 @@ object Gate extends Actor {
 
             //volani metody podle prikazu
             command match {
-              case "PASS" => getClientState(client).password = middleParameters.head
+              case "PASS" => client.password = middleParameters.head
               case "USER" => //zahodit, neni dulezite
-              case "NICK" => client ! nick(client, getClientState(client), middleParameters)
+              case "NICK" => client ! nick(client, middleParameters)
               //case "PRIVMSG" =>
-              case _ => client ! systemNotice(getNickName(client),"Neznamy prikaz: "+command+" ("+line+")")
+              case _ => client ! systemNotice(client.login,"Neznamy prikaz: "+command+" ("+line+")")
             }
 
 
           } catch {
             //po padu poslat zpravu s informaci o chybe a znovu se zotavit
-            case e: MatchError => client ! systemNotice(getNickName(client),"Nastala chyba pri parsovani prikazu: "+line)
+            case e: MatchError => client ! systemNotice(client.login,"Nastala chyba pri parsovani prikazu: "+line)
                                   e.printStackTrace
 
-            case e: Exception => client ! systemNotice(getNickName(client),"Nastala chyba pri zpracovani prikazu: "+line)
+            case e: Exception => client ! systemNotice(client.login,"Nastala chyba pri zpracovani prikazu: "+line)
                                  e.printStackTrace
           }
 
         //pozadavek o aktualizaci textu v kanalu
-        case ChannelMessagesRefresh(ch) =>
-          answer(sender) {
-            ChannelUsers(LideAPI.users(ch))
-          }
-
-        //synchronni dotaz na stav klienta
-/*        case ClientStateRequest(c) =>
-          def createNewStateAndReturn = {
-            val newState = new ClientState
-            clientStates += c->newState
-            newState
-          }
-
-          val replyValue = if (clientStates contains c) clientStates(c)
-            else createNewStateAndReturn
-
-          reply(replyValue)*/
-
-        case SetClientLogin(c,l) => getClientState(c).login = l
-
-        case SetClientPassword(c,p) => getClientState(c).password = p
+        case ChannelMessagesRefresh(ch) => actor {
+          ch ! ChannelUsers(LideAPI.users(ch))
+        }
 
         case _ => //vse ostatni zahodit
       }

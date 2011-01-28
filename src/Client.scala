@@ -8,7 +8,7 @@ import java.net.Socket
 
 /**
  * Created by IntelliJ IDEA.
- * User: hacx
+ * Author: svetylk0@seznam.cz
  * Date: 24.1.11
  * Time: 14:07
  * To change this template use File | Settings | File Templates.
@@ -23,6 +23,11 @@ class Client(val socket: Socket) extends Actor {
   val writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, encoding))
 
   val channels = List[Channel]()
+
+  //login a heslo klienta
+  var login = ""
+  var password = ""
+
 
   def dispose {
     exit
@@ -66,7 +71,7 @@ class Client(val socket: Socket) extends Actor {
   def act {
     loop {
       react {
-        case StringResponse(msg: String) =>
+        case Response(msg: String) =>
           verbose {
             println(">>> "+msg)
           }

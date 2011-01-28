@@ -2,7 +2,7 @@
 
 /**
  * Created by IntelliJ IDEA.
- * User: hacx
+ * Author: svetylk0@seznam.cz
  * Date: 25.1.11
  * Time: 18:11
  * To change this template use File | Settings | File Templates.
@@ -30,10 +30,10 @@ object Commands {
       "",
       "Welcome!","","") map { prefix + _ + "\n"}
 
-    StringResponse(msgBegin + lines.mkString + msgEnd)
+    Response(msgBegin + lines.mkString + msgEnd)
   }
 
-  def nick(client: Client, state: ClientState, params: Array[String]) = {
+  def nick(client: Client, params: Array[String]) = {
     val nickReg = """([^@]+)(@(\S+))?""".r
 
     nickReg.findFirstMatchIn(params.head) match {
@@ -41,18 +41,20 @@ object Commands {
         val domain = if (m.group(2) == null) "seznam.cz" else m.group(2)
         val user = m group 1
 
-          LideAPI.login(user,state.password,domain)
-          val nick = if (domain == "seznam.cz") user else user+"@"+domain
-          //ulozit state klienta
-          Gate ! SetClientLogin(client,nick)
-          //poslat welcome zpravu
-          sendWelcomeMessage(nick)
+        LideAPI.login(user,client.password,domain)
+        val nick = if (domain == "seznam.cz") user else user+"@"+domain
+        //ulozit state klienta
+        client.login = nick
+        //Gate ! SetClientLogin(client,nick)
+        //poslat welcome zpravu
+        sendWelcomeMessage(nick)
 
-      case None => EmptyResponse()
+      case None =>
     }
   }
 
-  def notice(from: String, to: String, text: String) = StringResponse(":"+from+" NOTICE "+to+" :"+text)
+  def notice(from: String, to: String, text: String) = Response(":"+from+" NOTICE "+to+" :"+text)
+
   def systemNotice(to: String, text: String) = notice(gateName, to, text)
 
 }
