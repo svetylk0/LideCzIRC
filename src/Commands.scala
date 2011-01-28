@@ -9,19 +9,50 @@
  */
 
 object Commands {
-  val RawMessage = """:?(\w+)([^:]+):([^\n\r]+)?""".r
+  import actors.Actor._
+  import Queries._
+  import Globals.gateName
 
+  val RawMessage = """:?(\w+)([^:]+):?([^\n\r]+)?""".r
 
-  def pass(c: Client, passwd: String) {
-    val state = Gate !! ClientStateRequest(c)
-    Gate ! UpdateClientState(c,state().copy(password = passwd))
+  def getMiddleParameters(p: String) = {
+    val reg = """\S+""".r
+    reg findAllIn p toArray
   }
 
-  def nick(c: Client, params: Array[String]) {
+  def sendWelcomeMessage(nick: String) = {
+    val prefix = ":"+gateName+" 372 " + nick + " :- "
+    val msgBegin = ":"+gateName+" 001 " + nick + " :\n"
+    val msgEnd = ":"+gateName+" 376 " + nick + " :End of /MOTD command."
 
+    val lines = List("","",
+      "LideCzIRC (no version available)",
+      "",
+      "Welcome!","","") map { prefix + _ + "\n"}
+
+    StringResponse(msgBegin + lines.mkString + msgEnd)
   }
 
-  def notice(user: String, text: String) = ":"+user+" NOTICE :"+text
-  def systemNotice(text: String) = notice("Gate",text)
+  def nick(client: Client, state: ClientState, params: Array[String]) = {
+    val nickReg = """([^@]+)(@(\S+))?""".r
+
+    nickReg.findFirstMatchIn(params.head) match {
+      case Some(m) =>
+        val domain = if (m.group(2) == null) "seznam.cz" else m.group(2)
+        val user = m group 1
+
+          LideAPI.login(user,state.password,domain)
+          val nick = if (domain == "seznam.cz") user else user+"@"+domain
+          //ulozit state klienta
+          Gate ! SetClientLogin(client,nick)
+          //poslat welcome zpravu
+          sendWelcomeMessage(nick)
+
+      case None => EmptyResponse()
+    }
+  }
+
+  def notice(from: String, to: String, text: String) = StringResponse(":"+from+" NOTICE "+to+" :"+text)
+  def systemNotice(to: String, text: String) = notice(gateName, to, text)
 
 }

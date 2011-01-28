@@ -1,4 +1,5 @@
-
+import jlidegw.Lide
+import collection.JavaConversions._
 /**
  * Created by IntelliJ IDEA.
  * User: hacx
@@ -8,12 +9,13 @@
  */
 
 object LideAPI {
-  import Queries._
 
-  def users(ch: Channel): Option[List[User]] = {
-    Some(List(User("pan1",Male,Ordinary),
-    User("adminka",Female,Admin),
-    User("DS",Male,DS),
-    User("SSka",Female,SS)))
+  val lide = new Lide
+
+
+  def users(ch: Channel) = lide.getRoomUsers(ch.name).toList map { x =>
+    User(x.getNick, Male, Ordinary)
   }
+
+  def login(u: String, p: String, d: String) = lide.login(u,p,d)
 }

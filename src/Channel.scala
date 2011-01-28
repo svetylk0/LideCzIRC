@@ -1,4 +1,5 @@
 import actors.Actor
+import actors.Actor._
 
 /**
  * Created by IntelliJ IDEA.
@@ -8,18 +9,20 @@ import actors.Actor
  * To change this template use File | Settings | File Templates.
  */
 
-trait Message
+trait Message {
+  val id: Long
+}
 
-case class CommonMessage(id: Long,
+case class CommonMessage(val id: Long,
                          from: Option[String],
                          text: String) extends Message
 
-case class WhisperMessage(id: Long,
+case class WhisperMessage(val id: Long,
                           from: Option[String],
                           to: Option[String],
                           text: String) extends Message
 
-case class SystemMessage(id: Long, text: String) extends Message
+case class SystemMessage(val id: Long, text: String) extends Message
 
 class Channel(val id: Long,
               val name: String,
@@ -28,7 +31,6 @@ class Channel(val id: Long,
               privilegedUsers: Map[Privilege,List[String]],
               var users: List[User]) extends Actor {
 
-  import Globals.threadRunner
   import Queries._
   import Commands._
   import Events._
@@ -37,16 +39,18 @@ class Channel(val id: Long,
   val usersSynchronizationTimeout = 1000l*60l
 
   def refreshPrivileges {
-    for ((privilege,ulist) <- privilegedUsers; user <- ulist) users find {
-        _.nick == user.nick
-    } match {
-      case Some(u) =>
-        if (u.mod != privilege) {
-          u.mod = privilege
-          //oznamit zmenu prav klientovi
-          client ! PrivilegeChangeEvent(u,privilege)
-        }
-      case None =>
+    for ((privilege,ulist) <- privilegedUsers; nick <- ulist) {
+      users find {
+        _.nick == nick
+      } match {
+        case Some(u) =>
+          if (u.mod != privilege) {
+            u.mod = privilege
+            //oznamit zmenu prav klientovi
+            client ! PrivilegeChangeEvent(u,privilege)
+          }
+        case None =>
+      }
     }
   }
 
@@ -71,7 +75,7 @@ class Channel(val id: Long,
     refreshPrivileges
   }
 
-  var lastMessageId = 0
+  var lastMessageId = 0l
 
   def processNewMessages(list: List[Message]) {
     //vybrat nove zpravy
@@ -96,16 +100,16 @@ class Channel(val id: Long,
     }
   }
 
-  //vlakno, ktere bude refreshovat zpravy v kanalu
-  threadRunner execute {
+  //akter, ktery bude refreshovat zpravy v kanalu
+  actor {
     loop {
       Thread.sleep(textRefreshTimeout)
       Gate ! ChannelMessagesRefresh(this)
     }
   }
 
-  //vlakno, ktere synchronizuje uzivatele kanalu
-  threadRunner execute {
+  //akter, ktery synchronizuje uzivatele kanalu
+  actor {
     loop {
       Thread.sleep(usersSynchronizationTimeout)
       Gate ! ChannelUsersRefresh(this)

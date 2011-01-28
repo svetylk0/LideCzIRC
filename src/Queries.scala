@@ -13,14 +13,20 @@ object Queries {
   case class ChannelUsersRefresh(channel: Channel)
 
 
-  //odpovedi, ktere dostava Channel od Gate
-  case class ChannelUsers(users: List[User])
-  case class ChannelMessages(users: List[Message])
 
   //obecne dotazy
-  case class UpdateClientState(client: Client, state: ClientState)
-
-  //asynchronni dotazy na Gate
   case class ClientStateRequest(client: Client)
+  case class SetClientPassword(client: Client, pass: String)
+  case class SetClientLogin(client: Client, login: String)
+
+  //odpovedi pro klienta
+  trait Response
+
+  case class StringResponse(item: String) extends Response
+  case class EmptyResponse() extends Response
+
+  //odpovedi, ktere dostava Channel od Gate
+  case class ChannelUsers(users: List[User]) extends Response
+  case class ChannelMessages(users: List[Message]) extends Response
 
 }

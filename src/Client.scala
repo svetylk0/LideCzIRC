@@ -1,4 +1,5 @@
 import actors.Actor
+import actors.Actor._
 import concurrent.ThreadRunner
 import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader}
 import java.net.Socket
@@ -15,9 +16,11 @@ import java.net.Socket
 
 class Client(val socket: Socket) extends Actor {
   import Globals._
+  import Debug._
+  import Queries._
 
-  val reader = new BufferedReader(InputStreamReader(socket.getInputStream, encoding))
-  val writer = new BufferedWriter(OutputStreamWriter(socket.getOutputStream, encoding))
+  val reader = new BufferedReader(new InputStreamReader(socket.getInputStream, encoding))
+  val writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, encoding))
 
   val channels = List[Channel]()
 
@@ -25,7 +28,7 @@ class Client(val socket: Socket) extends Actor {
     exit
   }
 
-  def disposeOnException[A](f: => A) {
+  def disposeOnException(f: => Unit) {
     try {
       f
     } catch {
@@ -41,16 +44,21 @@ class Client(val socket: Socket) extends Actor {
     }
   }
 
-  def read = disposeOnException {
-    reader.readLine
-  }
+  def read: String = reader.readLine
 
   //cteni vstupu klienta a preposilani  Gate
-  threadRunner execute {
-    loop {
-      val line = read
-      if (line == null) dispose
-      else Gate ! ((this,line))
+  actor {
+    disposeOnException {
+      while(true) {
+        val line = read
+
+        verbose {
+          println("<<< "+line)
+        }
+
+        if (line == null) dispose
+        else Gate ! ((this,line))
+      }
     }
   }
 
@@ -58,7 +66,13 @@ class Client(val socket: Socket) extends Actor {
   def act {
     loop {
       react {
+        case StringResponse(msg: String) =>
+          verbose {
+            println(">>> "+msg)
+          }
 
+          write(msg+"\n")
+        case _ => println("Got some shit, dropped.")
       }
     }
   }

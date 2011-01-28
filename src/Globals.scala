@@ -1,4 +1,3 @@
-import concurrent.ThreadRunner
 
 /**
  * Created by IntelliJ IDEA.
@@ -10,6 +9,5 @@ import concurrent.ThreadRunner
 
 object Globals {
   val encoding = "UTF-8"
-
-  val threadRunner = new ThreadRunner
+  val gateName = "Gate"
 }
