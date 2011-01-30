@@ -16,9 +16,18 @@ object Events {
   import Globals._
 
   //udalosti, ktere jsou odesilany klientovi
-  case class JoinEvent(user: User)
-  case class MessageEvent(message: Message)
-  case class PartEvent(user: User)
+  case class JoinEvent(user: User, channel: Channel) extends ResponseLike {
+    def toResponse = Response(":" + user.nick+" JOIN #" + channel.id + " :")
+  }
+
+  case class PartEvent(user: User, channel: Channel) extends ResponseLike {
+    def toResponse = Response(":" + user.nick+" PART #" + channel.id + " :")
+  }
+
+  case class MessageEvent(message: Message) extends ResponseLike {
+    def toResponse = message.toResponse
+  }
+
 
   case class PrivilegeChangeEvent(user: User,
                                   channel: Channel,

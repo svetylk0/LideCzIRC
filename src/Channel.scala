@@ -1,6 +1,13 @@
 import actors.Actor
 import actors.Actor._
 
+
+import Queries._
+import Commands._
+import Events._
+import Globals._
+import Implicits._
+
 /**
  * Created by IntelliJ IDEA.
  * Author: svetylk0@seznam.cz
@@ -9,20 +16,37 @@ import actors.Actor._
  * To change this template use File | Settings | File Templates.
  */
 
-trait Message {
+trait Message extends ResponseLike {
   val id: Long
+  val from: String
+  val to: String
+  val text: String
+
+  val messageType = "PRIVMSG"
+
+  def toResponse = Response(":"+from+" "+messageType+" " + to + " :"+text)
 }
 
 case class CommonMessage(val id: Long,
-                         from: Option[String],
-                         text: String) extends Message
+                         val from: String,
+                         val channel: String,
+                         val text: String) extends Message {
+  val to = channel
+}
 
 case class WhisperMessage(val id: Long,
-                          from: Option[String],
-                          to: Option[String],
-                          text: String) extends Message
+                          val from: String,
+                          val to: String,
+                          val text: String) extends Message
 
-case class SystemMessage(val id: Long, text: String) extends Message
+case class SystemMessage(val id: Long,
+                         val channel: String,
+                         val text: String) extends Message {
+  val to = channel
+  val from = gateName
+
+  override val messageType = "NOTICE"
+}
 
 class Channel(val id: String,
               val name: String,
@@ -31,11 +55,8 @@ class Channel(val id: String,
               privilegedUsers: Map[Privilege,List[String]],
               var users: List[User]) extends Actor {
 
-  import Queries._
-  import Commands._
-  import Events._
-  import Globals._
-  import Implicits._
+  //ozivit instanci kanalu hned po vytvoreni
+  start
 
   val textRefreshTimeout = 5000l
   val usersSynchronizationTimeout = 1000l*60l
@@ -58,7 +79,7 @@ class Channel(val id: String,
     client ! Response(":"+gateName+" 353 " + nickname + " = #" + id + " :" + userListMessage)
     client ! Response(":"+gateName+" 366 " + nickname + " #" + id + " :End of /NAMES list.")
 
-    //aktualizovat prava uzivatelu
+    //aktualizovat prava uzivatelu az na konec
     refreshPrivileges
   }
 
@@ -82,12 +103,12 @@ class Channel(val id: String,
   def updateUserChanges(list: List[User]) {
     //oznamit odchod
     users filterNot { list.contains } foreach {
-      client ! PartEvent(_)
+      client ! PartEvent(_,this)
     }
 
     //oznamit prichod
     list filterNot { users.contains } foreach {
-      client ! JoinEvent(_)
+      client ! JoinEvent(_,this)
     }
 
     //ulozit aktualni stav
@@ -124,15 +145,15 @@ class Channel(val id: String,
 
   //akter, ktery bude refreshovat zpravy v kanalu
   actor {
-    loop {
-      Thread.sleep(textRefreshTimeout)
+    while(true) {
       Gate ! ChannelMessagesRefresh(this)
+      Thread.sleep(textRefreshTimeout)
     }
   }
 
   //akter, ktery synchronizuje uzivatele kanalu
   actor {
-    loop {
+    while(true) {
       Thread.sleep(usersSynchronizationTimeout)
       Gate ! ChannelUsersRefresh(this)
     }

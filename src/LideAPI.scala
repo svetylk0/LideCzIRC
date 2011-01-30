@@ -39,4 +39,19 @@ object LideAPI {
     //vrati Id typu string, anebo selze
     lide.getRoomId(name)
   }
+
+  val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
+  def channelMessages(id: String) = {
+
+    lide.getRoomMessages(id).toList map { m =>
+      //parsovani smajliku do textove formy
+      val message = smileyReg replaceAllIn (m.getText, x => "{" + (x group 2) + "}")
+
+      (m.getFrom,m.getTo) match {
+        case (f: String,null) => CommonMessage(m.getId.toLong, m.getFrom, "#"+id, message)
+        case (f: String,to: String) => WhisperMessage(m.getId.toLong, m.getFrom, m.getTo, message)
+        case _ => SystemMessage(m.getId.toLong, "#"+id, message)
+      }
+    }
+  }
 }
