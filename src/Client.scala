@@ -77,7 +77,11 @@ class Client(val socket: Socket) extends Actor {
           }
 
           write(msg+"\n")
-        case _ => println("Got some shit, dropped.")
+
+
+        case r: ResponseLike => self ! r.toResponse
+
+        case _ => println("Prijata neznama zprava.")
       }
     }
   }

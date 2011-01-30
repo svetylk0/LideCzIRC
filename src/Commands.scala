@@ -13,14 +13,18 @@ object Commands {
   import Queries._
   import Globals.gateName
 
+  //regularni vyrazy
   val RawMessage = """:?(\w+)([^:]+):?([^\n\r]+)?""".r
+  val NickReg = """([^@]+)(@(\S+))?""".r
+  val RoomNameReg = """#(\S+)""".r
+  val RoomIdReg = """(\d+)""".r
 
   def getMiddleParameters(p: String) = {
     val reg = """\S+""".r
     reg findAllIn p toArray
   }
 
-  def sendWelcomeMessage(nick: String) = {
+  def welcomeMessageResponse(nick: String) = {
     val prefix = ":"+gateName+" 372 " + nick + " :- "
     val msgBegin = ":"+gateName+" 001 " + nick + " :\n"
     val msgEnd = ":"+gateName+" 376 " + nick + " :End of /MOTD command."
@@ -34,9 +38,7 @@ object Commands {
   }
 
   def nick(client: Client, params: Array[String]) = {
-    val nickReg = """([^@]+)(@(\S+))?""".r
-
-    nickReg.findFirstMatchIn(params.head) match {
+    NickReg.findFirstMatchIn(params.head) match {
       case Some(m) =>
         val domain = if (m.group(2) == null) "seznam.cz" else m.group(2)
         val user = m group 1
@@ -45,16 +47,30 @@ object Commands {
         val nick = if (domain == "seznam.cz") user else user+"@"+domain
         //ulozit state klienta
         client.login = nick
-        //Gate ! SetClientLogin(client,nick)
         //poslat welcome zpravu
-        sendWelcomeMessage(nick)
+        client ! welcomeMessageResponse(nick)
 
-      case None =>
+      case None => Failure
     }
   }
 
-  def notice(from: String, to: String, text: String) = Response(":"+from+" NOTICE "+to+" :"+text)
+  def join(client: Client, params: Array[String]) = {
+    //projit vsechny nazvy kanalu (mohou byt oddeleny carkou) a vstoupit do nich
+    for (x <- params map { _ split "," } flatten) x match {
+      case RoomNameReg(channel) =>
+        val id = channel match {
+          case RoomIdReg(channelId) => channelId //je to Id, muzeme to pouzit primo
+          case _ => LideAPI.mapChannelId(channel) //je to nazev, musime ho mapovat na Id
+        }
 
-  def systemNotice(to: String, text: String) = notice(gateName, to, text)
+        //vytvori novy kanal, ktery sam klientovi posle JOIN zpravu
+        LideAPI.joinChannel(client,id)
+      case _ => Failure
+    }
+  }
 
+  def noticeResponse(from: String, to: String, text: String) = response("NOTICE", from, to, text)
+  def systemNoticeResponse(to: String, text: String) = noticeResponse(gateName, to, text)
+
+  private def response(kind: String, from: String, target: String, content: String = "") = Response(":"+from+" "+kind+" "+target+" :"+content)
 }

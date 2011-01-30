@@ -39,18 +39,22 @@ object Gate extends Actor {
             command match {
               case "PASS" => client.password = middleParameters.head
               case "USER" => //zahodit, neni dulezite
-              case "NICK" => client ! nick(client, middleParameters)
+              case "NICK" => //prihlaseni necham jako blokujici, protoze meni stav klienta (promennou login)
+                nick(client, middleParameters)
+              case "JOIN" => actor {
+                join(client, middleParameters)
+              }
               //case "PRIVMSG" =>
-              case _ => client ! systemNotice(client.login,"Neznamy prikaz: "+command+" ("+line+")")
+              case _ => client ! systemNoticeResponse(client.login,"Neznamy prikaz: "+command+" ("+line+")")
             }
 
 
           } catch {
             //po padu poslat zpravu s informaci o chybe a znovu se zotavit
-            case e: MatchError => client ! systemNotice(client.login,"Nastala chyba pri parsovani prikazu: "+line)
+            case e: MatchError => client ! systemNoticeResponse(client.login,"Nastala chyba pri parsovani prikazu: "+line)
                                   e.printStackTrace
 
-            case e: Exception => client ! systemNotice(client.login,"Nastala chyba pri zpracovani prikazu: "+line)
+            case e: Exception => client ! systemNoticeResponse(client.login,"Nastala chyba pri zpracovani prikazu: "+line)
                                  e.printStackTrace
           }
 

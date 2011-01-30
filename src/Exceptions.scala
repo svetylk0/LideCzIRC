@@ -7,8 +7,15 @@
  * To change this template use File | Settings | File Templates.
  */
 
+/**
+ * Abstraktni trida definujici vyjimku, ktera se po vytvoreni jeji instance
+ * sama vyhodi.
+ */
 abstract class SelfThrowingException(str: String) extends Exception(str) {
   throw this
 }
 
-object Failure extends SelfThrowingException("Failure")
+/**
+ * Vyjimka obecneho selhani.
+ */
+object Failure extends SelfThrowingException("Doslo k selhani nektere z komponent.")

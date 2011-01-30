@@ -24,38 +24,60 @@ case class WhisperMessage(val id: Long,
 
 case class SystemMessage(val id: Long, text: String) extends Message
 
-class Channel(val id: Long,
+class Channel(val id: String,
               val name: String,
               val topic: String,
-              client: Actor,
+              client: Client,
               privilegedUsers: Map[Privilege,List[String]],
               var users: List[User]) extends Actor {
 
   import Queries._
   import Commands._
   import Events._
+  import Globals._
+  import Implicits._
 
   val textRefreshTimeout = 5000l
   val usersSynchronizationTimeout = 1000l*60l
+  val nickname = client.login
+
+  //vykonat pri vytvoreni instance kanalu
+  {
+    //pokud nejsme v seznamu, pridame se
+    if (!users.exists(_.nick === nickname)) users ::= User(nickname)
+
+    val userListMessage = users map { u =>
+      if (u.gender == Male) u.nick
+      else "+" + u.nick
+    } mkString " "
+
+    //po vytvoreni kanalu poslat klientovi JOIN zpravu
+    client ! Response(":" + nickname + " JOIN #" + id)
+    client ! Response(":"+gateName+" 332 " + nickname + " #" + id + " :[" + name + "] " + topic)
+    client ! Response(":"+gateName+" NOTICE #" + id + " :URL mistnosti: http://chat.lide.cz/room.fcgi?room_ID=" + id)
+    client ! Response(":"+gateName+" 353 " + nickname + " = #" + id + " :" + userListMessage)
+    client ! Response(":"+gateName+" 366 " + nickname + " #" + id + " :End of /NAMES list.")
+
+    //aktualizovat prava uzivatelu
+    refreshPrivileges
+  }
 
   def refreshPrivileges {
     for ((privilege,ulist) <- privilegedUsers; nick <- ulist) {
       users find {
-        _.nick == nick
+        _.nick === nick
       } match {
         case Some(u) =>
           if (u.mod != privilege) {
-            u.mod = privilege
             //oznamit zmenu prav klientovi
-            client ! PrivilegeChangeEvent(u,privilege)
+            client ! PrivilegeChangeEvent(u, this, u.mod, privilege)
+            u.mod = privilege
           }
         case None =>
       }
     }
   }
 
-  //aktualizovat prava uzivatelu hned na zacatku
-  refreshPrivileges
 
   def updateUserChanges(list: List[User]) {
     //oznamit odchod
