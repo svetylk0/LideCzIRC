@@ -49,9 +49,13 @@ object LideAPI {
 
       (m.getFrom,m.getTo) match {
         case (f: String,null) => CommonMessage(m.getId.toLong, m.getFrom, "#"+id, message)
-        case (f: String,to: String) => WhisperMessage(m.getId.toLong, m.getFrom, m.getTo, message)
+        case (f: String,to: String) => WhisperMessage(m.getId.toLong, m.getFrom, m.getTo, message, id)
         case _ => SystemMessage(m.getId.toLong, "#"+id, message)
       }
     }
+  }
+
+  def sendMessage(id: String, message: String) {
+    lide.sendMessage(id,message)
   }
 }

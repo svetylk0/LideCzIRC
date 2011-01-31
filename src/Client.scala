@@ -18,16 +18,16 @@ class Client(val socket: Socket) extends Actor {
   import Globals._
   import Debug._
   import Queries._
+  import Events._
 
   val reader = new BufferedReader(new InputStreamReader(socket.getInputStream, encoding))
   val writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, encoding))
 
-  val channels = List[Channel]()
+  var channels = List[Channel]()
 
   //login a heslo klienta
   var login = ""
   var password = ""
-
 
   def dispose {
     exit
@@ -78,9 +78,17 @@ class Client(val socket: Socket) extends Actor {
 
           write(msg+"\n")
 
+        case ChannelRegistration(ch) => channels ::= ch
 
+        //soukrome zpravy odchytavat zvlast a brat je pouze z jedineho kanalu (protoze jsou replikovany
+        //do vsech kanalu soucasne) - pouzijeme treba vzdy 1. kanal v seznamu
+        case MessageEvent(msg @ WhisperMessage(_,_,_,_,channelId)) =>
+          //pokud je zprava z 1. kanalu v seznamu, preposlat ji jako odpoved ke zpracovani
+          //jinak zahodit
+          if (channelId == channels.head.id) self ! msg.toResponse
+
+        //odchytit vse, co lze konvertovat na Response a preposlat ji ke zpracovani
         case r: ResponseLike => self ! r.toResponse
-
         case _ => println("Prijata neznama zprava.")
       }
     }

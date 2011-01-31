@@ -44,7 +44,9 @@ object Gate extends Actor {
               case "JOIN" => actor {
                 join(client, middleParameters)
               }
-              //case "PRIVMSG" =>
+              case "PRIVMSG" => actor {
+                privmsg(client, middleParameters, tailParameter)
+              }
               case _ => client ! systemNoticeResponse(client.login,"Neznamy prikaz: "+command+" ("+line+")")
             }
 

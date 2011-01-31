@@ -69,6 +69,18 @@ object Commands {
     }
   }
 
+  def privmsg(client: Client, params: Array[String], msg: String) = {
+    //pokud je to kanal, odebereme # a pouzijeme jeho id
+    val (id,message) = if (params.head.startsWith("#")) (params.head drop 1, msg)
+      else {
+        //je-li to soukroma zprava, posleme ji treba do 1. kanalu v seznamu kanalu klienta
+        //a pred zpravu pridame: /m [komu]
+        (client.channels.head.id, "/m "+params.head+" "+msg)
+      }
+
+    LideAPI.sendMessage(id,message)
+  }
+
   def noticeResponse(from: String, to: String, text: String) = response("NOTICE", from, to, text)
   def systemNoticeResponse(to: String, text: String) = noticeResponse(gateName, to, text)
 

@@ -12,6 +12,8 @@ object Queries {
   case class ChannelMessagesRefresh(channel: Channel)
   case class ChannelUsersRefresh(channel: Channel)
 
+  //zpravy, ktere posila Channel na Client
+  case class ChannelRegistration(channel: Channel)
 
 
   //obecne dotazy

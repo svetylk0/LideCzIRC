@@ -37,7 +37,8 @@ case class CommonMessage(val id: Long,
 case class WhisperMessage(val id: Long,
                           val from: String,
                           val to: String,
-                          val text: String) extends Message
+                          val text: String,
+                          channelId: String) extends Message
 
 case class SystemMessage(val id: Long,
                          val channel: String,
@@ -64,6 +65,9 @@ class Channel(val id: String,
 
   //vykonat pri vytvoreni instance kanalu
   {
+    //registrovat kanal u klienta
+    client ! ChannelRegistration(this)
+
     //pokud nejsme v seznamu, pridame se
     if (!users.exists(_.nick === nickname)) users ::= User(nickname)
 
@@ -122,7 +126,13 @@ class Channel(val id: String,
 
   def processNewMessages(list: List[Message]) {
     //vybrat nove zpravy
-    val newMessages = list filter { _.id > lastMessageId }
+    // + odfiltrovat zpravy, ktere pochazi od nas
+    val newMessages = list filter {
+      _.id > lastMessageId
+    } filterNot {
+      _.from === client.login
+    }
+
     //odeslat je klientovi
     newMessages foreach { client ! MessageEvent(_)}
     //ulozit posledni Id, pokud je seznam neprazdny
