@@ -1,4 +1,5 @@
-package
+import java.io.{InputStreamReader, InputStream}
+import scala.collection.immutable.PagedSeq
 
 
 /**
@@ -10,7 +11,14 @@ package
  */
 
 object Implicits {
+
+  import Globals.encoding
+
   implicit def compareStringIgnoreCase(str: String) = new {
     def ===(that: String) = str.equalsIgnoreCase(that)
   }
+
+  implicit def wrapInputStream[T <: InputStream](is: T) =
+    PagedSeq.fromReader(new InputStreamReader(is,encoding))
+
 }

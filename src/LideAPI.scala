@@ -7,16 +7,52 @@ import collection.JavaConversions._
  * Time: 14:06
  * To change this template use File | Settings | File Templates.
  */
+object LoginErrorException extends SelfThrowingException("Chybny login nebo heslo.")
 
 object LideAPI {
+  import Globals._
 
+  val http = new Http(userAgent,encoding)
   val lide = new Lide
+
+  import http.{Get,Post}
+
+  //konstanty
+  val LoginFormUrl = "https://login.szn.cz/loginProcess"
 
   def users(ch: Channel) = lide.getRoomUsers(ch.name).toList map { x =>
     User(x.getNick, Male, Ordinary)
   }
 
-  def login(u: String, p: String, d: String) = lide.login(u,p,d)
+  val loginUrlReg = """href="([^"]+)""".r
+  def login(username: String, password: String, domain: String) {
+
+    val data = Map(
+      "username" -> username,
+      "domain" -> domain,
+      "password" -> password,
+      "remember" -> "",
+      "login" -> "Přihlásit se",
+      "serviceId" -> "lide",
+      "disableSSL" -> "0",
+      "forceSSL" -> "0",
+      "lang" -> "cz",
+      "loginType" -> "seznam",
+      "returnURL" -> "http://www.lide.cz/",
+      "forceRelogin" -> "0",
+      "coid" -> ""
+    )
+
+    var response = Post(LoginFormUrl, data)
+    val url = loginUrlReg findFirstMatchIn response match {
+      case Some(m) => (m group 1).replaceAll("\\&amp;", "&")
+      case None => ""
+    }
+
+    Get(url)
+    response = Get("http://www.lide.cz/")
+    if (!response.contains("http://profil.lide.cz/"+username)) LoginErrorException
+  }
 
   def joinChannel(client: Client, id: String) = {
     //vstoupit
