@@ -62,7 +62,7 @@ object Gate extends Actor {
 
         //pozadavek o aktualizaci textu v kanalu
         case ChannelUsersRefresh(ch) => actor {
-          ch ! ChannelUsers(LideAPI.users(ch))
+          ch ! ChannelUsers(LideAPI.channelUsers(ch))
         }
 
         case ChannelMessagesRefresh(ch) => actor {

@@ -16,6 +16,7 @@ object Implicits {
 
   implicit def compareStringIgnoreCase(str: String) = new {
     def ===(that: String) = str.equalsIgnoreCase(that)
+    def !==(that: String) = !str.equalsIgnoreCase(that)
   }
 
   implicit def wrapInputStream[T <: InputStream](is: T) =

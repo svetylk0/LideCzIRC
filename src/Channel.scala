@@ -60,7 +60,7 @@ class Channel(val id: String,
   start
 
   val textRefreshTimeout = 5000l
-  val usersSynchronizationTimeout = 1000l*60l
+  val usersSynchronizationTimeout = 1000l*15l
   val nickname = client.login
 
   //vykonat pri vytvoreni instance kanalu
@@ -105,14 +105,16 @@ class Channel(val id: String,
 
 
   def updateUserChanges(list: List[User]) {
+    //v obou pripadech ignorujeme sebe
+
     //oznamit odchod
-    users filterNot { list.contains } foreach {
-      client ! PartEvent(_,this)
+    users filterNot { n => list.exists { _.nick === n.nick } } foreach { u =>
+      if (u.nick !== nickname) client ! PartEvent(u,this)
     }
 
     //oznamit prichod
-    list filterNot { users.contains } foreach {
-      client ! JoinEvent(_,this)
+    list filterNot { n => users.exists { _.nick === n.nick } } foreach { u =>
+      if (u.nick !== nickname) client ! JoinEvent(u,this)
     }
 
     //ulozit aktualni stav

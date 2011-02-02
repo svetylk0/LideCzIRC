@@ -1,4 +1,5 @@
 import jlidegw.Lide
+import math.{random,round}
 import collection.JavaConversions._
 /**
  * Created by IntelliJ IDEA.
@@ -19,6 +20,7 @@ object LideAPI {
 
   //konstanty
   val LoginFormUrl = "https://login.szn.cz/loginProcess"
+  val ChannelContentUrlPattern = "http://chat.lide.cz/room.fcgi?akce=win_js&auth=&room_ID="
   val ChannelTextUrlPattern = "http://chat.lide.cz/room.fcgi?akce=text&auth=&skin=&m=1&room_ID="
   val ChannelEntranceUrlPattern = "http://chat.lide.cz/room.fcgi?auth=&room_ID="
   val ChannelInfoUrlPattern = "http://chat.lide.cz/room.fcgi?akce=info&auth=&room_ID="
@@ -37,16 +39,12 @@ object LideAPI {
   val loginUrlReg = """href="([^"]+)""".r
   val leavingUrlReg = """room.fcgi\?akce=odejit&room_ID=[0-9]+&auth=&hashId=[0-9]+""".r
   val c1timeReg = """cfg.c1time\s*=\s*"(\d+)""".r
+  val channelMessageReg = """top.a4\((\d+),'\w*','([^']+)','([^']*)','([^']*)'""".r
   val channelNameReg = """Místnost:\s*<span class="red">([^<]+)</span>""".r
   val channelTopicReg = """<strong>Popis:</strong></td>\s*\n\s*<td>\s*\n\s*((\S| )+)""".r
   val channelDsReg = """<strong>Aktuální správce:</strong></td>\s*\n\s*<td>\s*\n\s*<a href="http://profil.lide.cz/([^/]+)""".r
   val channelSsReg = """href="http://profil.lide.cz/([^/]+)/profil/" target="_blank">[^<]+</a>,""".r
   val userListReg = """<OPTION VALUE="\d+"\s*>(\S+)\s*\((m|ž)\)""".r
-
-  def users(ch: Channel) = lide.getRoomUsers(ch.name).toList map { x =>
-    User(x.getNick, Male, Ordinary)
-  }
-
 
   def login(username: String, password: String, domain: String) {
 
@@ -123,6 +121,8 @@ object LideAPI {
     new Channel(id, channelName, channelTopic, client, privileges, users)
   }
 
+  def channelUsers(ch: Channel): List[User] = channelUsers(ch.id)
+
   def channelUsers(id: String) = {
     val response = Get(ChannelTextUrlPattern + id)
     (userListReg findAllIn response).matchData map { m =>
@@ -168,17 +168,36 @@ object LideAPI {
   }
 
   def channelMessages(id: String) = {
+    /**
+     * B
+     */
+    //nacteme zpravy v kanalu
+    val response = Get(ChannelContentUrlPattern + id + "&m=1&" + round(random*9999))
 
-    lide.getRoomMessages(id).toList map { m =>
+    //prevod na objekty zprav
+    (channelMessageReg findAllIn response).matchData map { m =>
       //parsovani smajliku do textove formy
-      val message = smileyReg replaceAllIn (m.getText, x => "{" + (x group 2) + "}")
+      val message = smileyReg replaceAllIn (m group 2, x => "{" + (x group 2) + "}")
+
+      //messageId, from, to
+      (m group 1, m group 3, m group 4) match {
+        case (messageId, "", "") => SystemMessage(messageId.toLong, "#"+id, message)
+        case (messageId, from, "") => CommonMessage(messageId.toLong, from, "#"+id, message)
+        case (messageId, from, to) => WhisperMessage(messageId.toLong, from, to, message, id)
+      }
+    } toList
+    /**
+     * E
+     */
+
+   /* lide.getRoomMessages(id).toList map { m =>
 
       (m.getFrom,m.getTo) match {
         case (f: String,null) => CommonMessage(m.getId.toLong, m.getFrom, "#"+id, message)
         case (f: String,to: String) => WhisperMessage(m.getId.toLong, m.getFrom, m.getTo, message, id)
         case _ => SystemMessage(m.getId.toLong, "#"+id, message)
       }
-    }
+    }*/
   }
 
   def sendMessage(id: String, message: String) {
