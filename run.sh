@@ -1,2 +1,2 @@
 #!/bin/bash
-scala -cp build LideCzIRC
+scala -Dactors.corePoolSize=100 -cp build LideCzIRC
