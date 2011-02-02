@@ -37,7 +37,7 @@ object Gate extends Actor {
 
             //volani metody podle prikazu
             command match {
-              case "PASS" => client.password = middleParameters.head
+              case "PASS" => pass(client,middleParameters,tailParameter)
               case "USER" => //zahodit, neni dulezite
               case "NICK" => //prihlaseni necham jako blokujici, protoze meni stav klienta (promennou login)
                 nick(client, middleParameters)

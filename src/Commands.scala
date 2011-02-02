@@ -37,6 +37,10 @@ object Commands {
     Response(msgBegin + lines.mkString + msgEnd)
   }
 
+  def pass(client: Client, params: Array[String], tail: String) {
+    client.password = if (tail == null) params.head else tail
+  }
+
   def nick(client: Client, params: Array[String]) = {
     NickReg.findFirstMatchIn(params.head) match {
       case Some(m) =>
