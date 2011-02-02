@@ -54,7 +54,7 @@ object Commands {
     }
   }
 
-  def join(client: Client, params: Array[String]) = {
+  def join(client: Client, params: Array[String]) {
     //projit vsechny nazvy kanalu (mohou byt oddeleny carkou) a vstoupit do nich
     for (x <- params map { _ split "," } flatten) x match {
       case RoomNameReg(channel) =>
@@ -69,7 +69,17 @@ object Commands {
     }
   }
 
-  def privmsg(client: Client, params: Array[String], msg: String) = {
+  def part(client: Client, params: Array[String]) {
+    val id = params.head drop 1
+    LideAPI.partChannel(id)
+    //najit kanal a poslat mu zpravu aby ukoncil cinnost
+    client.channels find { _.id == id } match {
+      case Some(ch) => ch ! ChannelPart
+      case None => ChannelPartFailure
+    }
+  }
+
+  def privmsg(client: Client, params: Array[String], msg: String) {
     //pokud je to kanal, odebereme # a pouzijeme jeho id
     val (id,message) = if (params.head.startsWith("#")) (params.head drop 1, msg)
       else {

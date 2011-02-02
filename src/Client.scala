@@ -80,6 +80,8 @@ class Client(val socket: Socket) extends Actor {
 
         case ChannelRegistration(ch) => channels ::= ch
 
+        case ChannelRemoval(ch) => channels = channels filterNot { _.id == ch.id }
+
         //soukrome zpravy odchytavat zvlast a brat je pouze z jedineho kanalu (protoze jsou replikovany
         //do vsech kanalu soucasne) - pouzijeme treba vzdy 1. kanal v seznamu
         case MessageEvent(msg @ WhisperMessage(_,_,_,_,channelId)) =>

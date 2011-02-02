@@ -27,8 +27,13 @@ class AccessDeniedException(s: String) extends SelfThrowingException(s)
 object Failure extends SelfThrowingException("Doslo k selhani nektere z komponent.")
 
 object C1timeParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty c1time.")
+object C2timeParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty c2time.")
+object HashIdParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty hashId.")
 object LeavingUrlParseFailure extends SelfThrowingException("Selhalo parsovani URL pro opusteni kanalu.")
+
 object ChannelNameParseFailure extends SelfThrowingException("Selhalo parsovani nazvu kanalu.")
 object ChannelDsParseFailure extends SelfThrowingException("Selhalo parsovani docasneho spravce kanalu.")
+object ChannelMapFailure extends SelfThrowingException("Selhalo mapovani nazvu kanalu na id.")
+object ChannelPartFailure extends SelfThrowingException("Odchod z kanalu selhal.")
 
 

@@ -14,7 +14,7 @@ object Queries {
 
   //zpravy, ktere posila Channel na Client
   case class ChannelRegistration(channel: Channel)
-
+  case class ChannelRemoval(channel: Channel)
 
   //obecne dotazy
 
@@ -24,5 +24,5 @@ object Queries {
   //odpovedi, ktere dostava Channel od Gate
   case class ChannelUsers(users: List[User])
   case class ChannelMessages(users: List[Message])
-
+  object ChannelPart
 }

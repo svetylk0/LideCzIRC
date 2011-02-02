@@ -44,6 +44,9 @@ object Gate extends Actor {
               case "JOIN" => actor {
                 join(client, middleParameters)
               }
+              case "PART" => actor {
+                part(client, middleParameters)
+              }
               case "PRIVMSG" => actor {
                 privmsg(client, middleParameters, tailParameter)
               }
