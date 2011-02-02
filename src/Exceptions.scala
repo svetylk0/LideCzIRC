@@ -16,6 +16,19 @@ abstract class SelfThrowingException(str: String) extends Exception(str) {
 }
 
 /**
+ * Vyjimky se zpravou
+ */
+class AccessDeniedException(s: String) extends SelfThrowingException(s)
+
+
+/**
  * Vyjimka obecneho selhani.
  */
 object Failure extends SelfThrowingException("Doslo k selhani nektere z komponent.")
+
+object C1timeParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty c1time.")
+object LeavingUrlParseFailure extends SelfThrowingException("Selhalo parsovani URL pro opusteni kanalu.")
+object ChannelNameParseFailure extends SelfThrowingException("Selhalo parsovani nazvu kanalu.")
+object ChannelDsParseFailure extends SelfThrowingException("Selhalo parsovani docasneho spravce kanalu.")
+
+

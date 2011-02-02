@@ -16,7 +16,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="scala-library-2.8.1" level="application" />
-    <orderEntry type="library" exported="" name="Unnamed" level="project" />
+    <orderEntry type="library" name="Unnamed" level="project" />
   </component>
 </module>
 

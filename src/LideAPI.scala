@@ -19,12 +19,35 @@ object LideAPI {
 
   //konstanty
   val LoginFormUrl = "https://login.szn.cz/loginProcess"
+  val ChannelTextUrlPattern = "http://chat.lide.cz/room.fcgi?akce=text&auth=&skin=&m=1&room_ID="
+  val ChannelEntranceUrlPattern = "http://chat.lide.cz/room.fcgi?auth=&room_ID="
+  val ChannelInfoUrlPattern = "http://chat.lide.cz/room.fcgi?akce=info&auth=&room_ID="
+  val ChannelDetailsUrlPattern = "http://chat.lide.cz/index.fcgi?akce=info_room&auth=&room_ID="
+  val ChatUrl = "http://chat.lide.cz/"
+
+  //promenne
+  //pro kazde id kanalu budeme ukladat c1time
+  var c1timeMap = Map[String,String]()
+  //URL pro odchod z kanalu
+  var leavingUrlMap = Map[String,String]()
+
+  //regularni vyrazy
+  val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
+
+  val loginUrlReg = """href="([^"]+)""".r
+  val leavingUrlReg = """room.fcgi\?akce=odejit&room_ID=[0-9]+&auth=&hashId=[0-9]+""".r
+  val c1timeReg = """cfg.c1time\s*=\s*"(\d+)""".r
+  val channelNameReg = """Místnost:\s*<span class="red">([^<]+)</span>""".r
+  val channelTopicReg = """<strong>Popis:</strong></td>\s*\n\s*<td>\s*\n\s*((\S| )+)""".r
+  val channelDsReg = """<strong>Aktuální správce:</strong></td>\s*\n\s*<td>\s*\n\s*<a href="http://profil.lide.cz/([^/]+)""".r
+  val channelSsReg = """href="http://profil.lide.cz/([^/]+)/profil/" target="_blank">[^<]+</a>,""".r
+  val userListReg = """<OPTION VALUE="\d+"\s*>(\S+)\s*\((m|ž)\)""".r
 
   def users(ch: Channel) = lide.getRoomUsers(ch.name).toList map { x =>
     User(x.getNick, Male, Ordinary)
   }
 
-  val loginUrlReg = """href="([^"]+)""".r
+
   def login(username: String, password: String, domain: String) {
 
     val data = Map(
@@ -44,10 +67,7 @@ object LideAPI {
     )
 
     var response = Post(LoginFormUrl, data)
-    val url = loginUrlReg findFirstMatchIn response match {
-      case Some(m) => (m group 1).replaceAll("\\&amp;", "&")
-      case None => ""
-    }
+    val url = BugWorkArounds.w1(loginUrlReg,response)
 
     Get(url)
     response = Get("http://www.lide.cz/")
@@ -55,20 +75,91 @@ object LideAPI {
   }
 
   def joinChannel(client: Client, id: String) = {
-    //vstoupit
-    lide.enterTheRoom(id)
+    //vstoupit do kanalu
+    var response = Get(ChannelEntranceUrlPattern + id)
 
-    //ziskat potrebne udaje
-    val info = lide.getRoomInfo(id)
-    val users = lide.getRoomUsers(id).toList map { u =>
-      val gender = if (u.isMale) Male else Female
-      User(u.getNick, gender)
+    //overi, jestli nebyl odmitnut pristup do kanalu
+    //pokud ano, vyhodi vyjimku
+    Responses.checkForAccessDeniedResponse(response)
+
+    //pridat c1time do mapy
+    c1timeMap += id -> {
+      c1timeReg findFirstMatchIn response match {
+        case Some(m) => m group 1
+        case None => //C1timeParseFailure
+          ""
+      }
     }
 
-    val privileges = Map[Privilege,List[String]](DS -> List(info.getDS), SS -> info.getSS.toList)
+    //otevrit stranku s info o kanalu (nutne pro dokonceni vstupu)
+    response = Get(ChannelInfoUrlPattern + id)
 
-    //vrati Channel
-    new Channel(id, info.getName, info.getTopic, client, privileges, users)
+    //ulozit URL pro odchod z kanalu
+    leavingUrlMap += id -> {
+      leavingUrlReg findFirstIn response match {
+        case Some(m) => ChatUrl + m
+        case None => //LeavingUrlParseFailure
+         ""
+      }
+    }
+
+
+
+
+    //zeby 1x na sucho?
+    //channelDetails(roomID);
+
+
+    //ziskat potrebne udaje kanalu
+    val (channelDS, channelSS, channelName, channelTopic) = channelDetails(id)
+
+    //ziskat seznam uzivatelu
+    val users = channelUsers(id)
+
+    //vytvorit mapu privilegii
+    val privileges = Map[Privilege,List[String]](DS -> List(channelDS), SS -> channelSS)
+
+    //vratit Channel
+    new Channel(id, channelName, channelTopic, client, privileges, users)
+  }
+
+  def channelUsers(id: String) = {
+    val response = Get(ChannelTextUrlPattern + id)
+    (userListReg findAllIn response).matchData map { m =>
+      (m group 1, m group 2) match {
+        case (nick, "ž") => User(nick, Female)
+        case (nick, _) => User(nick, Male)
+      }
+    } toList
+  }
+
+  def channelDetails(id: String) = {
+    val response = Get(ChannelDetailsUrlPattern + id)
+
+    val name = channelNameReg findFirstMatchIn response match {
+      case Some(m) => m group 1
+      case None => //ChannelNameParseFailure
+        ""
+    }
+
+    val topic = channelTopicReg findFirstMatchIn response match {
+      case Some(m) => m group 1
+      case None => //ChannelNameParseFailure
+        ""
+    }
+
+    val DS = channelDsReg findFirstMatchIn response match {
+      case Some(m) =>
+        val value = m group 1
+        if (value == "není") "" else value
+      case None => //ChannelDsParseFailure
+        ""
+    }
+
+    val SS = (for (m <- channelSsReg findAllIn response matchData;
+                                if m.group(1) != null) yield m group 1).toList
+
+    (DS, SS, name, topic)
   }
 
   def mapChannelId(name: String) = {
@@ -76,7 +167,6 @@ object LideAPI {
     lide.getRoomId(name)
   }
 
-  val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
   def channelMessages(id: String) = {
 
     lide.getRoomMessages(id).toList map { m =>
