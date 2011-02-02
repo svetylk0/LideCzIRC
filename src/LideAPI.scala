@@ -69,7 +69,7 @@ object LideAPI {
     )
 
     var response = Post(LoginFormUrl, data)
-    val url = BugWorkArounds.w1(loginUrlReg,response)
+    val url = BugWorkarounds.w1(loginUrlReg,response)
 
     Get(url)
     response = Get("http://www.lide.cz/")

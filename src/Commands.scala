@@ -30,9 +30,9 @@ object Commands {
     val msgEnd = ":"+gateName+" 376 " + nick + " :End of /MOTD command."
 
     val lines = List("","",
-      "LideCzIRC (no version available)",
+      "LideCzIRC",
       "",
-      "Welcome!","","") map { prefix + _ + "\n"}
+      "Vitejte!","","") map { prefix + _ + "\n"}
 
     Response(msgBegin + lines.mkString + msgEnd)
   }
