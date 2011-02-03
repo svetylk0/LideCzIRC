@@ -9,6 +9,7 @@
 
 object Queries {
   //dotazy, ktere posila Channel na Gate
+  case class ChannelStateRefresh(channel: Channel)
   case class ChannelMessagesRefresh(channel: Channel)
   case class ChannelUsersRefresh(channel: Channel)
 
@@ -22,7 +23,12 @@ object Queries {
   case class Response(item: String)
 
   //odpovedi, ktere dostava Channel od Gate
+  case class ChannelState(messages: List[Message],
+                          users: List[User],
+                          privileges: Map[Privilege,List[String]])
+
   case class ChannelUsers(users: List[User])
-  case class ChannelMessages(users: List[Message])
+  case class ChannelMessages(messages: List[Message])
   object ChannelPart
+  object ChannelDispose
 }

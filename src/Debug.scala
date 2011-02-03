@@ -1,5 +1,3 @@
-package
-
 
 /**
  * Created by IntelliJ IDEA.
@@ -11,8 +9,14 @@ package
 
 object Debug {
   var verboseEnabled = true
+  var debugEnabled = false
 
   def verbose(f: => Unit) {
     if (verboseEnabled) f
   }
+
+  def debug(f: => Unit) {
+    if (debugEnabled) f
+  }
+
 }

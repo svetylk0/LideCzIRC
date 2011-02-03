@@ -59,6 +59,11 @@ object Commands {
     }
   }
 
+  def who(client: Client, params: Array[String]) {
+    val target = params.head
+    if (target startsWith "#") client ! Response(":"+gateName+" 315 "+client.login+" "+target+" :End of /WHO list.")
+  }
+
   def join(client: Client, params: Array[String]) {
     //projit vsechny nazvy kanalu (mohou byt oddeleny carkou) a vstoupit do nich
     for (x <- params map { _ split "," } flatten) x match {
@@ -70,7 +75,7 @@ object Commands {
 
         //vytvori novy kanal, ktery sam klientovi posle JOIN zpravu
         client.api.joinChannel(client,id)
-      case _ => Failure
+      case _ => //tise ignorovat
     }
   }
 

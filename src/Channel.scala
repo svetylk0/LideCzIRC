@@ -7,6 +7,7 @@ import Commands._
 import Events._
 import Globals._
 import Implicits._
+import Debug._
 
 /**
  * Created by IntelliJ IDEA.
@@ -81,7 +82,7 @@ class Channel(val id: String,
               val name: String,
               val topic: String,
               val client: Client,
-              privilegedUsers: Map[Privilege,List[String]],
+              var privilegedUsers: Map[Privilege,List[String]],
               var users: List[User]) extends Actor with Disposable with Idler {
 
   //ozivit instanci kanalu hned po vytvoreni
@@ -124,7 +125,12 @@ class Channel(val id: String,
    */
 
   def refreshPrivileges = applyPrivileges(users) { (u,privilege) =>
-    client ! PrivilegeChangeEvent(u, this, u.mod, privilege)
+    //ignorovat prechody DS -> SS a SS -> DS
+    (u.mod, privilege) match {
+      case (SS,DS) => //ignorovat
+      case (DS,SS) => //ignorovat
+      case _ => client ! PrivilegeChangeEvent(u, this, u.mod, privilege)
+    }
   }
 
   def applyPrivileges(userList: List[User])(reaction: (User,Privilege) => Unit) {
@@ -189,10 +195,28 @@ class Channel(val id: String,
       client ! MessageEvent(SystemMessage(0,"#"+id,"Idler:"+idlerString))
     }
 
-    //odeslat je klientovi + odfiltrovat zpravy, ktere pochazi od nas
-    for (message <- newMessages if message.from !== client.login) client ! MessageEvent(message)
+    //odeslat nove zpravy klientovi + odfiltrovat zpravy, ktere pochazi od nas
+    for (message <- newMessages if message.from !== client.login) {
+      client ! MessageEvent(message)
+    }
     //ulozit posledni Id, pokud je seznam neprazdny
     if (!newMessages.isEmpty) lastMessageId = newMessages.last.id
+  }
+
+  //uzivatele a zpravy budeme refreshovat najednou (a casto)
+  //akter, ktery bude refreshovat zpravy v kanalu
+  val parentChannel = this
+  val refreshActor = new Actor() with Disposable {
+    start
+
+    def act {
+      while(alive) {
+        Gate ! ChannelStateRefresh(parentChannel)
+//        Gate ! ChannelMessagesRefresh(parentChannel)
+//        Gate ! ChannelUsersRefresh(parentChannel)
+        Thread.sleep(textRefreshTimeout)
+      }
+    }
   }
 
   def act {
@@ -204,34 +228,30 @@ class Channel(val id: String,
         //aktualizovany seznam zprav v kanalu
         case ChannelMessages(list) => processNewMessages(list)
 
+        case ChannelState(messages, users, privileges) =>
+          privilegedUsers = privileges
+          updateUserChanges(users)
+          processNewMessages(messages)
+
+        case ChannelDispose =>
+          //ukoncit beh refreshujiciho aktera
+          alive = false
+          //ukoncit svuj beh
+          dispose
+
         case ChannelPart =>
           //poslat udalost odchodu
           client ! PartEvent(User(client.login),this)
           //odhlasit kanal u klienta
           client ! ChannelRemoval(this)
-          //ukoncit beh refreshujiciho aktera
-          refreshActor.dispose
-          //ukoncit svuj beh
-          dispose
+          //ukoncit cinnost
+          self ! ChannelDispose
         case _ => //vse ostatni zahodit
       }
     }
   }
 
-  //uzivatele a zpravy budeme refreshovat najednou (a casto)
-  //akter, ktery bude refreshovat zpravy v kanalu
-  val parentChannel = this
-  val refreshActor = new Actor() with Disposable {
-    start
 
-    def act {
-      while(true) {
-        Gate ! ChannelMessagesRefresh(parentChannel)
-        Gate ! ChannelUsersRefresh(parentChannel)
-        Thread.sleep(textRefreshTimeout)
-      }
-    }
-  }
 
 }
 

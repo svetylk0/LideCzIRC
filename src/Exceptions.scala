@@ -12,7 +12,7 @@
  * sama vyhodi.
  */
 abstract class SelfThrowingException(str: String) extends Exception(str) {
-  throw this
+
 }
 
 /**

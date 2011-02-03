@@ -10,8 +10,8 @@ import java.net.Socket
  * To change this template use File | Settings | File Templates.
  */
 
-case class ClientState(var login: String = "",
-                       var password: String = "")
+//case class ClientState(var login: String = "",
+  //                     var password: String = "")
 
 
 object Gate extends Actor {
@@ -41,6 +41,8 @@ object Gate extends Actor {
               case "USER" => //zahodit, neni dulezite
               case "NICK" => //prihlaseni necham jako blokujici, protoze meni stav klienta (promennou login)
                 nick(client, middleParameters)
+              case "WHO" => who(client,middleParameters)
+              case "MODE" => //tise ignorovat
               case "JOIN" => actor {
                 join(client, middleParameters)
               }
@@ -65,11 +67,15 @@ object Gate extends Actor {
 
         //pozadavek o aktualizaci textu v kanalu
         case ChannelUsersRefresh(ch) => actor {
-          ch ! ChannelUsers(ch.client.api.channelUsers(ch))
+          ch ! ChannelUsers(ch.client.api.channelUsers(ch.id))
         }
 
         case ChannelMessagesRefresh(ch) => actor {
           ch ! ChannelMessages(ch.client.api.channelMessages(ch.id))
+        }
+
+        case ChannelStateRefresh(ch) => actor {
+          ch ! ch.client.api.channelState(ch.id)
         }
 
         case _ => //vse ostatni zahodit

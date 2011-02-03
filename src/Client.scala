@@ -80,7 +80,10 @@ class Client(val socket: Socket) extends Actor {
 
           write(msg+"\n")
 
-        case ChannelRegistration(ch) => channels ::= ch
+        case ChannelRegistration(ch) =>
+          if (channels exists { _.id == ch.id})
+            ch ! ChannelDispose
+          else channels ::= ch
 
         case ChannelRemoval(ch) => channels = channels filterNot { _.id == ch.id }
 

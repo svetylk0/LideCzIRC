@@ -12,6 +12,7 @@ import java.net.URLEncoder.encode
 
 class LideAPI {
   import Globals._
+  import Queries._
   import Implicits._
 
   val http = new Http(userAgent,encoding)
@@ -79,7 +80,23 @@ class LideAPI {
     Get(leavingUrlMap(id))
   }
 
-  def joinChannel(client: Client, id: String) {
+  def channelState(id: String) = {
+    //ziskat potrebne udaje kanalu
+    val (channelDS, channelSS, _, _) = channelDetails(id)
+
+    //vytvorit mapu privilegii
+    val privileges = Map[Privilege,List[String]](DS -> List(channelDS), SS -> channelSS)
+
+    //ziskat seznam uzivatelu
+    val users = channelUsers(id)
+
+    //ziskat seznam zprav
+    val messages = channelMessages(id)
+
+    ChannelState(messages, users, privileges)
+  }
+
+  def channelEntranceProcedure(id: String) {
     //vstoupit do kanalu
     var response = Get(ChannelEntranceUrlPattern + id)
 
@@ -107,30 +124,40 @@ class LideAPI {
          ""
       }
     }
+  }
+
+  def joinChannel(client: Client, id: String) {
+    //spustit proceduru vstupu do kanalu
+    channelEntranceProcedure(id)
 
     //ziskat potrebne udaje kanalu
     val (channelDS, channelSS, channelName, channelTopic) = channelDetails(id)
 
-    //ziskat seznam uzivatelu
-    val users = channelUsers(id)
-
     //vytvorit mapu privilegii
     val privileges = Map[Privilege,List[String]](DS -> List(channelDS), SS -> channelSS)
+
+    //ziskat seznam uzivatelu
+    val users = channelUsers(id)
 
     //vytvorit Channel
     new Channel(id, channelName, channelTopic, client, privileges, users)
   }
 
-  def channelUsers(ch: Channel): List[User] = channelUsers(ch.id)
-
   def channelUsers(id: String) = {
     val response = Get(ChannelTextUrlPattern + id)
+
     (userListReg findAllIn response).matchData map { m =>
       (m group 1, m group 2) match {
         case (nick, "ž") => User(nick, Female)
         case (nick, _) => User(nick, Male)
       }
-    } toList
+    } toList match {
+      case x if x.size == 0 =>
+        //jestli je seznam uzivatelu prazdny - neco je spatne (zopakujeme proceduru vstupu do kanalu)
+        channelEntranceProcedure(id)
+        Nil
+      case x => x
+    }
   }
 
   def removeHtmlTags(s: String) = s.replaceAll("<[^>]+?>","")
@@ -195,15 +222,21 @@ class LideAPI {
       //parsovani smajliku do textove formy
       val message = parseLinks(parseSmileys(m group 2))
 
-
-
       //messageId, from, to
       (m group 1, m group 3, m group 4) match {
         case (messageId, "", "") => SystemMessage(messageId.toLong, "#"+id, removeHtmlTags(message))
         case (messageId, from, "") => CommonMessage(messageId.toLong, from, "#"+id, message)
         case (messageId, from, to) => WhisperMessage(messageId.toLong, from, to, message, id)
       }
-    } toList
+    } toList match {
+      case x if x.size == 0 =>
+        //jestli je seznam zprav prazdny - neco je spatne (zopakujeme proceduru vstupu do kanalu)
+        channelEntranceProcedure(id)
+        Nil
+      case x => x
+    }
+
+
   }
 
   def messageConstants(id: String) = {
