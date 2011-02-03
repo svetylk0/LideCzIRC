@@ -22,6 +22,28 @@ trait Disposable {
   }
 }
 
+trait Idler {
+  import System.{currentTimeMillis => time}
+
+  val idleTime = 60*1000*30l
+  val idlerString = "."
+
+  var lastTime = time
+
+  def idlerReset {
+    lastTime = time
+  }
+
+  def diff = time - lastTime
+
+  def idlerCheckout(execute: => Unit) {
+    if (diff > idleTime) {
+      execute
+      idlerReset
+    }
+  }
+}
+
 trait Message extends ResponseLike {
   val id: Long
   val from: String
@@ -58,9 +80,9 @@ case class SystemMessage(val id: Long,
 class Channel(val id: String,
               val name: String,
               val topic: String,
-              client: Client,
+              val client: Client,
               privilegedUsers: Map[Privilege,List[String]],
-              var users: List[User]) extends Actor with Disposable {
+              var users: List[User]) extends Actor with Disposable with Idler {
 
   //ozivit instanci kanalu hned po vytvoreni
   start
@@ -153,15 +175,22 @@ class Channel(val id: String,
 
   def processNewMessages(list: List[Message]) {
     //vybrat nove zpravy
-    // + odfiltrovat zpravy, ktere pochazi od nas
     val newMessages = list filter {
       _.id > lastMessageId
-    } filterNot {
-      _.from === client.login
     }
 
-    //odeslat je klientovi
-    newMessages foreach { client ! MessageEvent(_)}
+    //pokud je nejaka nova zprava od nas, resetovat idler
+    if (newMessages exists { _.from === client.login }) idlerReset
+
+    //provest idler checkout (jestli nebyla prekrocena doba neaktivity)
+    //pokud ano, poslat . na kanal a zaroven oznameni klientovi
+    idlerCheckout {
+      Gate ! ((client,"PRIVMSG #"+id+" :"+idlerString))
+      client ! MessageEvent(SystemMessage(0,"#"+id,"Idler:"+idlerString))
+    }
+
+    //odeslat je klientovi + odfiltrovat zpravy, ktere pochazi od nas
+    for (message <- newMessages if message.from !== client.login) client ! MessageEvent(message)
     //ulozit posledni Id, pokud je seznam neprazdny
     if (!newMessages.isEmpty) lastMessageId = newMessages.last.id
   }

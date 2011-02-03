@@ -23,6 +23,8 @@ class Client(val socket: Socket) extends Actor {
   val reader = new BufferedReader(new InputStreamReader(socket.getInputStream, encoding))
   val writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, encoding))
 
+  val api = new LideAPI
+
   var channels = List[Channel]()
 
   //login a heslo klienta

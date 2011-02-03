@@ -47,7 +47,7 @@ object Commands {
         val domain = if (m.group(2) == null) "seznam.cz" else m.group(2)
         val user = m group 1
 
-        LideAPI.login(user,client.password,domain)
+        client.api.login(user,client.password,domain)
         val nick = if (domain == "seznam.cz") user else user+"@"+domain
         //ulozit state klienta
         client.login = nick
@@ -64,18 +64,18 @@ object Commands {
       case RoomNameReg(channel) =>
         val id = channel match {
           case RoomIdReg(channelId) => channelId //je to Id, muzeme to pouzit primo
-          case _ => LideAPI.mapChannelId(channel) //je to nazev, musime ho mapovat na Id
+          case _ => client.api.mapChannelId(channel) //je to nazev, musime ho mapovat na Id
         }
 
         //vytvori novy kanal, ktery sam klientovi posle JOIN zpravu
-        LideAPI.joinChannel(client,id)
+        client.api.joinChannel(client,id)
       case _ => Failure
     }
   }
 
   def part(client: Client, params: Array[String]) {
     val id = params.head drop 1
-    LideAPI.partChannel(id)
+    client.api.partChannel(id)
     //najit kanal a poslat mu zpravu aby ukoncil cinnost
     client.channels find { _.id == id } match {
       case Some(ch) => ch ! ChannelPart
@@ -92,7 +92,7 @@ object Commands {
         (client.channels.head.id, "/m "+params.head+" "+msg)
       }
 
-    LideAPI.sendMessage(id,message)
+    client.api.sendMessage(id,message)
   }
 
   def noticeResponse(from: String, to: String, text: String) = response("NOTICE", from, to, text)

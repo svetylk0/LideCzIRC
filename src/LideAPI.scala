@@ -9,9 +9,8 @@ import java.net.URLEncoder.encode
  * To change this template use File | Settings | File Templates.
  */
 
-object LoginErrorException extends SelfThrowingException("Chybny login nebo heslo.")
 
-object LideAPI {
+class LideAPI {
   import Globals._
   import Implicits._
 

@@ -12,11 +12,11 @@ object LideCzIRC {
 
   def main(args: Array[String]) {
     val server = new ServerSocket(6667)
-    println("Listening on 6667 ...")
+    println("Nasloucham na portu 6667 ...")
 
     while(true) {
       val s = server.accept
-      println("Got some from: "+s.getInetAddress.toString)
+      println("Nove pripojeni od: "+s.getInetAddress.toString)
       (new Client(s)).start
     }
 
