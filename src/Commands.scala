@@ -1,4 +1,4 @@
-
+import util.matching.Regex.Match
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,6 +18,7 @@ object Commands {
   val NickReg = """([^@]+)(@(\S+))?""".r
   val RoomNameReg = """#(\S+)""".r
   val RoomIdReg = """(\d+)""".r
+  val UrlReg = """\w+:\/\/[\S]+""".r
 
   def getMiddleParameters(p: String) = {
     val reg = """\S+""".r
@@ -83,7 +84,30 @@ object Commands {
     }
   }
 
-  def privmsg(client: Client, params: Array[String], msg: String) {
+  val replacer = (m: Match) => try {
+    io.Source.fromURL("http://jdem.cz/get?url="+m.toString).mkString match {
+      case "http://jdem.cz/fuck" => m.toString
+      case url => url
+    }
+  } catch {
+    case _ => m.toString
+  }
+
+  def shortenURLs(client: Client, from: String, text: String) = {
+    val replaced = UrlReg.replaceAllIn(text, replacer)
+    //pokud se retezce lisi, oznamit zmeny jednotlivych URL
+    if (text != replaced) {
+      for ((a,b) <- (UrlReg.findAllIn(text)) zip (UrlReg.findAllIn(replaced))) {
+        client ! noticeResponse("Jdem.cz", from, a + " -> " + b)
+      }
+    }
+    replaced
+  }
+
+  def privmsg(client: Client, params: Array[String], tmpMsg: String) {
+    //zkratit adresy pomoci jdem.cz
+    val msg = shortenURLs(client, params.head, tmpMsg)
+
     //pokud je to kanal, odebereme # a pouzijeme jeho id
     val (id,message) = if (params.head.startsWith("#")) (params.head drop 1, msg)
       else {
