@@ -23,12 +23,12 @@ object Queries {
   case class Response(item: String)
 
   //odpovedi, ktere dostava Channel od Gate
-  case class ChannelState(messages: List[Message],
+  case class ChannelState(name: String,
+                          topic: String,
+                          messages: List[Message],
                           users: List[User],
-                          privileges: Map[Privilege,List[String]])
+                          privileges: Map[String, Privilege])
 
-  case class ChannelUsers(users: List[User])
-  case class ChannelMessages(messages: List[Message])
   object ChannelPart
   object ChannelDispose
 }

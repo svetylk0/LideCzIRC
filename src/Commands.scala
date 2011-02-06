@@ -59,6 +59,14 @@ object Commands {
     }
   }
 
+  def mode(client: Client, params: Array[String]) {
+    val (id, mode, target) = (params(0) drop 1, params(1), params(2))
+    mode match {
+      case "+o" => client.api.sendMessage(id, "/admin "+target)
+      case _ => //tise ignorovat
+    }
+  }
+
   def who(client: Client, params: Array[String]) {
     val target = params.head
     if (target startsWith "#") client ! Response(":"+gateName+" 315 "+client.login+" "+target+" :End of /WHO list.")

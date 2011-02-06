@@ -82,14 +82,13 @@ class Channel(val id: String,
               val name: String,
               val topic: String,
               val client: Client,
-              var privilegedUsers: Map[Privilege,List[String]],
+              beginningPrivileges: Map[String,Privilege],
               var users: List[User]) extends Actor with Disposable with Idler {
 
   //ozivit instanci kanalu hned po vytvoreni
   start
 
   val textRefreshTimeout = 10000l
-  val usersSynchronizationTimeout = 1000l*15l
   val nickname = client.login
 
   var lastMessageId = 0l
@@ -118,43 +117,51 @@ class Channel(val id: String,
   client ! Response(":"+gateName+" 366 " + nickname + " #" + id + " :End of /NAMES list.")
 
   //aktualizovat prava uzivatelu az na konec
-  refreshPrivileges
+  refreshPrivileges(users, beginningPrivileges)
 
   /**
    * konec bloku
    */
 
-  def refreshPrivileges = applyPrivileges(users) { (u,privilege) =>
-    //ignorovat prechody DS -> SS a SS -> DS
-    (u.mod, privilege) match {
-      case (SS,DS) => //ignorovat
-      case (DS,SS) => //ignorovat
-      case _ => client ! PrivilegeChangeEvent(u, this, u.mod, privilege)
+  def refreshPrivileges(userList: List[User], privileges: Map[String,Privilege]) =
+    applyPrivileges(userList, privileges) { (u,privilege) =>
+      //ignorovat prechody DS -> SS a SS -> DS
+      (u.mod, privilege) match {
+        case (SS,DS) => //ignorovat
+        case (DS,SS) => //ignorovat
+        case _ => client ! PrivilegeChangeEvent(u, this, u.mod, privilege)
+      }
     }
-  }
 
-  def applyPrivileges(userList: List[User])(reaction: (User,Privilege) => Unit) {
-    for ((privilege,ulist) <- privilegedUsers; nick <- ulist) {
-      userList find {
-        _.nick === nick
-      } match {
-        case Some(u) =>
-          if (u.mod != privilege) {
-            //oznamit zmenu prav klientovi pres funkci reakce
-            reaction(u,privilege)
-            u.mod = privilege
+  //pomocna funkce, ktera nedela nic (zmeny prav se nebudou oznamovat)
+  implicit val noPrivilegeNotification = (a: User, b: Privilege) => ()
+
+  def applyPrivileges(userList: List[User], privileges: Map[String,Privilege])(implicit reaction: (User, Privilege) => Unit) = {
+    val lifted = privileges.lift
+    userList foreach { user =>
+      lifted(user.nick) match {
+        case Some(privilege) =>
+          if (user.mod != privilege) {
+            //oznamit reakci na zmenu (tato cast kontroluje pridavani prav)
+            reaction(user, privilege)
+            //aplikovat zmenu
+            user.mod = privilege
           }
         case None =>
+          //tato cast kontroluje odebirani prav
+          if (user.mod != Ordinary) {
+            //oznamit reakci
+            reaction(user, Ordinary)
+            //ulozit zmenu
+            user.mod = Ordinary
+          }
       }
     }
   }
 
-  //pomocna funkce, ktera nedela nic (zmeny prav se nebudou oznamovat)
-  val noPrivilegeNotification = (a: User, b: Privilege) => ()
-
-  def updateUserChanges(list: List[User]) {
-    //nastavime prava uzivatelu v novem listu a az pak porovnavame a oznamime zmeny
-    applyPrivileges(list)(noPrivilegeNotification)
+  def updateUserChanges(l: List[User], privileges: Map[String,Privilege]) {
+    //seznam neobsahuje nas; pridame se
+    val list = User(client.login) :: l
 
     //v obou pripadech ignorujeme sebe
     //oznamit odchod
@@ -162,8 +169,11 @@ class Channel(val id: String,
       if (u.nick !== nickname) client ! PartEvent(u,this)
     }
 
+    //prichozi
+    val incoming = list filterNot { n => users.exists { _.nick === n.nick } }
+
     //oznamit prichod
-    list filterNot { n => users.exists { _.nick === n.nick } } foreach { u =>
+    incoming foreach { u =>
       if (u.nick !== nickname) {
         client ! JoinEvent(u,this)
         //pokud je uzivatel zena, pridat ji voice mod
@@ -171,11 +181,12 @@ class Channel(val id: String,
       }
     }
 
-    //ulozit aktualni stav
-    users = list
+    //aktualizovat prava prichozich
+    refreshPrivileges(incoming, privileges)
 
-    //aktualizovat prava uzivatelu
-    refreshPrivileges
+    //nastavit prava vsech uzivatelu noveho listu a ulozit ho do users
+    applyPrivileges(list, privileges)
+    users = list
   }
 
 
@@ -212,8 +223,6 @@ class Channel(val id: String,
     def act {
       while(alive) {
         Gate ! ChannelStateRefresh(parentChannel)
-//        Gate ! ChannelMessagesRefresh(parentChannel)
-//        Gate ! ChannelUsersRefresh(parentChannel)
         Thread.sleep(textRefreshTimeout)
       }
     }
@@ -222,15 +231,12 @@ class Channel(val id: String,
   def act {
     loop {
       react {
-        //aktualizovany seznam uzivatelu
-        case ChannelUsers(list) => updateUserChanges(list)
-
-        //aktualizovany seznam zprav v kanalu
-        case ChannelMessages(list) => processNewMessages(list)
-
-        case ChannelState(messages, users, privileges) =>
-          privilegedUsers = privileges
-          updateUserChanges(users)
+        case ChannelState(_, _, messages, newUsers, privileges) =>
+          //refresh privilegii stavajicich
+          refreshPrivileges(users, privileges)
+          //uprava zmen uzivatelu a refresh privilegii prichozich
+          //+ update users
+          updateUserChanges(newUsers, privileges)
           processNewMessages(messages)
 
         case ChannelDispose =>

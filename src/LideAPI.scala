@@ -81,19 +81,21 @@ class LideAPI {
   }
 
   def channelState(id: String) = {
+    channelEntranceProcedure(id)
+
     //ziskat potrebne udaje kanalu
-    val (channelDS, channelSS, _, _) = channelDetails(id)
+    val (channelDS, channelSS, channelName, channelTopic) = channelDetails(id)
 
     //vytvorit mapu privilegii
-    val privileges = Map[Privilege,List[String]](DS -> List(channelDS), SS -> channelSS)
+    val privileges = Map(channelDS -> DS) ++ (channelSS map { _ -> SS }).toMap
 
-    //ziskat seznam uzivatelu
+    //ziskat seznam uzivatelu + pridat sebe
     val users = channelUsers(id)
 
     //ziskat seznam zprav
     val messages = channelMessages(id)
 
-    ChannelState(messages, users, privileges)
+    ChannelState(channelName, channelTopic, messages, users, privileges)
   }
 
   def channelEntranceProcedure(id: String) {
@@ -127,20 +129,11 @@ class LideAPI {
   }
 
   def joinChannel(client: Client, id: String) {
-    //spustit proceduru vstupu do kanalu
-    channelEntranceProcedure(id)
-
-    //ziskat potrebne udaje kanalu
-    val (channelDS, channelSS, channelName, channelTopic) = channelDetails(id)
-
-    //vytvorit mapu privilegii
-    val privileges = Map[Privilege,List[String]](DS -> List(channelDS), SS -> channelSS)
-
-    //ziskat seznam uzivatelu
-    val users = channelUsers(id)
+    //ziskat stav kanalu
+    val state = channelState(id)
 
     //vytvorit Channel
-    new Channel(id, channelName, channelTopic, client, privileges, users)
+    new Channel(id, state.name, state.topic, client, state.privileges, state.users)
   }
 
   def channelUsers(id: String) = {

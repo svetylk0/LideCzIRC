@@ -42,7 +42,9 @@ object Gate extends Actor {
               case "NICK" => //prihlaseni necham jako blokujici, protoze meni stav klienta (promennou login)
                 nick(client, middleParameters)
               case "WHO" => who(client,middleParameters)
-              case "MODE" => //tise ignorovat
+              case "MODE" => actor {
+                mode(client, middleParameters)
+              }
               case "JOIN" => actor {
                 join(client, middleParameters)
               }
@@ -65,15 +67,7 @@ object Gate extends Actor {
                                  e.printStackTrace
           }
 
-        //pozadavek o aktualizaci textu v kanalu
-        case ChannelUsersRefresh(ch) => actor {
-          ch ! ChannelUsers(ch.client.api.channelUsers(ch.id))
-        }
-
-        case ChannelMessagesRefresh(ch) => actor {
-          ch ! ChannelMessages(ch.client.api.channelMessages(ch.id))
-        }
-
+        //pozadavek o aktualizaci stavu v kanalu
         case ChannelStateRefresh(ch) => actor {
           ch ! ch.client.api.channelState(ch.id)
         }
