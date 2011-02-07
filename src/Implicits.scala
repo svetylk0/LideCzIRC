@@ -14,9 +14,10 @@ object Implicits {
 
   import Globals.encoding
 
-  implicit def compareStringIgnoreCase(str: String) = new {
+  implicit def enhancedString(str: String) = new {
     def ===(that: String) = str.equalsIgnoreCase(that)
     def !==(that: String) = !str.equalsIgnoreCase(that)
+    def containsIgnoreCase(that: String) = str.toLowerCase.contains(that.toLowerCase)
   }
 
   implicit def wrapInputStream[T <: InputStream](is: T) =
