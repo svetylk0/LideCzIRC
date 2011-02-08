@@ -16,8 +16,15 @@ object Admin extends Privilege
 
 trait Gender
 
-object Male extends Gender
-object Female extends Gender
+object Male extends Gender {
+  override def toString = "boys"
+}
 
-case class User(val nick: String, val gender: Gender = Male, var mod: Privilege = Ordinary)
+object Female extends Gender {
+  override def toString = "girls"
+}
+
+case class User(val nick: String, val gender: Gender = Male, var mod: Privilege = Ordinary) {
+  override def toString = nick+"!"+nick+"@"+gender+".lide.cz"
+}
 

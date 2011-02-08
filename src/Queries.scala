@@ -13,6 +13,9 @@ object Queries {
   case class ChannelMessagesRefresh(channel: Channel)
   case class ChannelUsersRefresh(channel: Channel)
 
+  //zpravy, ktere posila LideAPI na Gate
+  case class PartAndJoin(id: String, api: LideAPI)
+
   //zpravy, ktere posila Channel na Client
   case class ChannelRegistration(channel: Channel)
   case class ChannelRemoval(channel: Channel)

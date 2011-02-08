@@ -1,6 +1,6 @@
 /*
  * Created by IntelliJ IDEA.
- * User: hacx
+ * User: svetylk0@seznam.cz
  * Date: 2.2.11
  * Time: 11:38
  */

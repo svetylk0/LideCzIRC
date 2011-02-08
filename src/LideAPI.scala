@@ -1,5 +1,6 @@
 import math.{random,round}
 import java.net.URLEncoder.encode
+import util.matching.Regex
 
 /**
  * Created by IntelliJ IDEA.
@@ -20,7 +21,12 @@ class LideAPI {
 
   //konstanty
   val LoginFormUrl = "https://login.szn.cz/loginProcess"
-  val ChannelContentUrlPattern = "http://chat.lide.cz/room.fcgi?akce=win_js&auth=&room_ID="
+  val LideChatUrl = "http://chat.lide.cz/"
+
+  //vyjimka (jako metoda)
+  def ChannelContentUrlPattern(id: String, lastId: String) =
+    LideChatUrl+"room.fcgi?akce=win_js&room_ID="+id+"&auth=&last="+lastId+"&"+round(random*9999d)
+
   val ChannelTextUrlPattern = "http://chat.lide.cz/room.fcgi?akce=text&auth=&skin=&m=1&room_ID="
   val ChannelEntranceUrlPattern = "http://chat.lide.cz/room.fcgi?auth=&room_ID="
   val ChannelInfoUrlPattern = "http://chat.lide.cz/room.fcgi?akce=info&auth=&room_ID="
@@ -30,6 +36,9 @@ class LideAPI {
   //promenne
   //pro kazde id kanalu budeme ukladat c1time
   var c1timeMap = Map[String,String]()
+  var lastIdMap = Map[String,String]()
+  //po kazdem refreshi ulozit Url pro nacteni zprav
+  var channelContentUrlMap = Map[String,String]()
   //URL pro odchod z kanalu
   var leavingUrlMap = Map[String,String]()
 
@@ -37,12 +46,13 @@ class LideAPI {
   val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
   val linksReg = """<a[^>]+?>(\S+?)<\/a>""".r
   val channelMapReg = "room.fcgi\\?auth=&room_ID=(\\d+)\" title=\"Vstoupit\">([^<]+)</a>".r
-
+  val lastIdReg = """top.last_ID=(\d+);</script>""".r
   val loginUrlReg = """href="([^"]+)""".r
   val leavingUrlReg = """room.fcgi\?akce=odejit&room_ID=[0-9]+&auth=&hashId=[0-9]+""".r
   val c1timeReg = """cfg.c1time\s*=\s*"(\d+)""".r
   val c2timeReg = """\"c2time" VALUE="([0-9]+)\"""".r
   val hashIdReg = """=\"hashId\" value=\"([0-9]+)\"""".r
+  val channelContentUrlReg = """<FRAME NAME="win" SRC="(room.fcgi\?akce=win_js&auth=&room_ID=\d+&m=1&\d+.\d+)""".r
   val channelMessageReg = """top.a4\((\d+),'\w*','([^']+)','([^']*)','([^']*)'""".r
   val channelNameReg = """Místnost:\s*<span class="red">([^<]+)</span>""".r
   val channelTopicReg = """<strong>Popis:</strong></td>\s*\n\s*<td>\s*\n\s*((\S| )+)""".r
@@ -70,24 +80,30 @@ class LideAPI {
 
     var response = Post(LoginFormUrl, data)
     val url = BugWorkarounds.w1(loginUrlReg,response)
+    /*val url = loginUrlReg findFirstMatchIn response match {
+      case Some(m) => (m group 1).replaceAll("\\&amp;", "&")
+      case None => ""
+    } */
 
     Get(url)
     response = Get("http://www.lide.cz/")
     if (!response.contains("http://profil.lide.cz/"+username)) LoginErrorException
   }
 
+
   def partChannel(id: String) {
     Get(leavingUrlMap(id))
   }
 
   def channelState(id: String) = {
+    //(re)vstup do kanalu
     channelEntranceProcedure(id)
 
     //ziskat potrebne udaje kanalu
-    val (channelDS, channelSS, channelName, channelTopic) = channelDetails(id)
+    val (channelDS, channelSS, channelAdmins, channelName, channelTopic) = channelDetails(id)
 
     //vytvorit mapu privilegii
-    val privileges = Map(channelDS -> DS) ++ (channelSS map { _ -> SS }).toMap
+    val privileges = Map(channelDS -> DS) ++ (channelSS map { _ -> SS }).toMap ++ (channelAdmins map { _ -> Admin }).toMap
 
     //ziskat seznam uzivatelu + pridat sebe
     val users = channelUsers(id)
@@ -110,6 +126,15 @@ class LideAPI {
     c1timeMap += id -> {
       c1timeReg findFirstMatchIn response match {
         case Some(m) => m group 1
+        case None => //C1timeParseFailure
+          ""
+      }
+    }
+
+    //pridat Url pro nacteni zprav do mapy
+    channelContentUrlMap += id -> {
+      channelContentUrlReg findFirstMatchIn response match {
+        case Some(m) => LideChatUrl + (m group 1)
         case None => //C1timeParseFailure
           ""
       }
@@ -144,16 +169,24 @@ class LideAPI {
         case (nick, "ž") => User(nick, Female)
         case (nick, _) => User(nick, Male)
       }
-    } toList match {
+    } toList /*match {
       case x if x.size == 0 =>
-        //jestli je seznam uzivatelu prazdny - neco je spatne (zopakujeme proceduru vstupu do kanalu)
-        channelEntranceProcedure(id)
+        //jestli je seznam uzivatelu prazdny - neco je spatne
+        //zkusime part&join
+        Gate ! PartAndJoin(id, this)
         Nil
       case x => x
-    }
+    }          */
   }
 
   def removeHtmlTags(s: String) = s.replaceAll("<[^>]+?>","")
+
+  val getAdmins = {
+    val reg = """<td>(.+?)<\/td>\s*<td>.+?<\/td>\s*<td><img""".r
+    for {m <- (reg findAllIn Get("http://administrator.sweb.cz/index.php")).matchData.toList
+           val nick = m group 1
+           if nick != null } yield nick
+  }
 
   def channelDetails(id: String) = {
     val response = Get(ChannelDetailsUrlPattern + id)
@@ -179,17 +212,20 @@ class LideAPI {
         ""
     }
 
-    val SS = (for (m <- channelSsReg findAllIn response matchData;
-                                if m.group(1) != null) yield m group 1).toList
+    val SS = {
+      for {m <- channelSsReg findAllIn response matchData
+           val nick = m group 1
+           if nick != null } yield nick
+    }.toList
 
-    (DS, SS, name, topic)
+    (DS, SS, getAdmins, name, topic)
   }
 
   def mapChannelId(name: String) = {
     //vrati Id typu string, anebo selze
-    val encodedName = encode(name, "UTF-8");
+    val encodedName = encode(name, "UTF-8")
 
-    val response = Get("http://chat.lide.cz/index.fcgi?auth=&obj=room&search=" + encodedName.replaceAll("\\s+", "%20"));
+    val response = Get("http://chat.lide.cz/index.fcgi?auth=&obj=room&search=" + encodedName.replaceAll("\\s+", "%20"))
 
     (channelMapReg findAllIn response).matchData find { m =>
       (m group 2) === name
@@ -199,16 +235,33 @@ class LideAPI {
         ChannelMapFailure
         ""
     }
-    //lide.getRoomId(name)
   }
 
   def parseSmileys(s: String) = smileyReg replaceAllIn (s, x => "{" + (x group 2) + "}")
 
   def parseLinks(s: String) = linksReg replaceAllIn (s, _ group 1)
 
+  def firstMessagesUrl(id: String) = {
+    val reg = """<FRAME NAME="win" SRC="(room.fcgi\?akce=win_js&auth=&room_ID=\d+&m=1&\d+\.\d+)""".r
+    reg findFirstMatchIn Get(ChannelEntranceUrlPattern + id) match {
+      case Some(m) => LideChatUrl + (m group 1)
+      case None => ChannelContentUrlPattern(id, "0")
+    }
+  }
+
   def channelMessages(id: String) = {
     //nacteme zpravy v kanalu
-    val response = Get(ChannelContentUrlPattern + id + "&m=1&" + round(random*9999))
+//    val response = Get(channelContentUrlMap(id))
+    val response = lastIdMap.lift(id) match {
+      case Some(lastId) => Get(ChannelContentUrlPattern(id, lastId))
+      case None => Get(firstMessagesUrl(id))
+    }
+
+    //nacteme a ulozime lastId
+    lastIdReg findFirstMatchIn response match {
+      case Some(m) => lastIdMap += id -> (m group 1)
+      case None => LastIdParseFailure
+    }
 
     //prevod na objekty zprav
     (channelMessageReg findAllIn response).matchData map { m =>
@@ -221,15 +274,7 @@ class LideAPI {
         case (messageId, from, "") => CommonMessage(messageId.toLong, from, "#"+id, message)
         case (messageId, from, to) => WhisperMessage(messageId.toLong, from, to, message, id)
       }
-    } toList match {
-      case x if x.size == 0 =>
-        //jestli je seznam zprav prazdny - neco je spatne (zopakujeme proceduru vstupu do kanalu)
-        channelEntranceProcedure(id)
-        Nil
-      case x => x
-    }
-
-
+    } toList
   }
 
   def messageConstants(id: String) = {

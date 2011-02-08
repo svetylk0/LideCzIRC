@@ -27,7 +27,9 @@ class AccessDeniedException(s: String) extends SelfThrowingException(s)
 object Failure extends SelfThrowingException("Doslo k selhani nektere z komponent.")
 
 object LoginErrorException extends SelfThrowingException("Chybny login nebo heslo.")
+
 object C1timeParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty c1time.")
+object LastIdParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty lastId.")
 object C2timeParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty c2time.")
 object HashIdParseFailure extends SelfThrowingException("Selhalo parsovani hodnoty hashId.")
 object LeavingUrlParseFailure extends SelfThrowingException("Selhalo parsovani URL pro opusteni kanalu.")

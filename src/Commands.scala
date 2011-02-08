@@ -27,7 +27,9 @@ object Commands {
 
   def welcomeMessageResponse(nick: String) = {
     val prefix = ":"+gateName+" 372 " + nick + " :- "
-    val msgBegin = ":"+gateName+" 001 " + nick + " :\n"
+    val msgBegin =
+      ":"+gateName+" 001 " + nick + " :\n" +
+      ":"+gateName+" 005 " + nick + " PREFIX=(Aohv)^@%+ CHANTYPES=# :are supported by this server\n"
     val msgEnd = ":"+gateName+" 376 " + nick + " :End of /MOTD command."
 
     val lines = List("","",

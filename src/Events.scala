@@ -17,11 +17,11 @@ object Events {
 
   //udalosti, ktere jsou odesilany klientovi
   case class JoinEvent(user: User, channel: Channel) extends ResponseLike {
-    def toResponse = Response(":" + user.nick+" JOIN :#" + channel.id)
+    def toResponse = Response(":" + user +" JOIN :#" + channel.id)
   }
 
   case class PartEvent(user: User, channel: Channel) extends ResponseLike {
-    def toResponse = Response(":" + user.nick+" PART :#" + channel.id)
+    def toResponse = Response(":" + user +" PART :#" + channel.id)
   }
 
   case class MessageEvent(message: Message) extends ResponseLike {
@@ -41,7 +41,6 @@ object Events {
       case (Ordinary, SS) => Response(":"+gateName+" MODE #" + channel.id + " +o " + user.nick)
       case (Ordinary, DS) => Response(":"+gateName+" MODE #" + channel.id + " +h " + user.nick)
       case (DS, Ordinary) => Response(":"+gateName+" MODE #" + channel.id + " -h " + user.nick)
-      //case (SS, DS) => Response(":"+gateName+" MODE #" + channel.id + " +o " + user.nick)
       case _ => systemNoticeResponse("#"+channel.id, "Nastala neznama zmena prav uzivatele: "+user.nick)
     }
 

@@ -10,10 +10,6 @@ import java.net.Socket
  * To change this template use File | Settings | File Templates.
  */
 
-//case class ClientState(var login: String = "",
-  //                     var password: String = "")
-
-
 object Gate extends Actor {
   //spustime Gate aktera hned ze startu
   start
@@ -51,6 +47,9 @@ object Gate extends Actor {
               case "PART" => actor {
                 part(client, middleParameters)
               }
+              case "KICK" => actor {
+                privmsg(client, middleParameters, "/kick "+tailParameter)
+              }
               case "PRIVMSG" => actor {
                 privmsg(client, middleParameters, tailParameter)
               }
@@ -71,6 +70,13 @@ object Gate extends Actor {
         case ChannelStateRefresh(ch) => actor {
           ch ! ch.client.api.channelState(ch.id)
         }
+
+        //part&join kanalu
+//        case PartAndJoin(id, api) => actor {
+//          api.partChannel(id)
+          //channel state naprazdno
+//          api.channelState(id)
+//        }
 
         case _ => //vse ostatni zahodit
       }

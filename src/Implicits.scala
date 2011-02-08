@@ -20,6 +20,9 @@ object Implicits {
     def containsIgnoreCase(that: String) = str.toLowerCase.contains(that.toLowerCase)
   }
 
+  implicit def userToString(x: User) = x.toString
+  implicit def genderToString(x: Gender) = x.toString
+
   implicit def wrapInputStream[T <: InputStream](is: T) =
     PagedSeq.fromReader(new InputStreamReader(is,encoding))
 

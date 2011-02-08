@@ -83,7 +83,7 @@ class Channel(val id: String,
               val topic: String,
               val client: Client,
               beginningPrivileges: Map[String,Privilege],
-              var users: List[User]) extends Actor with Disposable {
+              var users: List[User]) extends Actor with Disposable with Idler {
 
   //ozivit instanci kanalu hned po vytvoreni
   start
@@ -191,25 +191,30 @@ class Channel(val id: String,
 
 
   def processNewMessages(list: List[Message]) {
+
+    //zpravy by mely chodit pouze nove ... prozatim vypneme
+    val newMessages = list
+    /*
     //vybrat nove zpravy
     val newMessages = list filter {
       _.id > lastMessageId
-    } filterNot {
+    } /*filterNot {
       //odfiltrovat systemove zpravy naseho odchodu a prichodu
       case SystemMessage(_, _, text) if (text.containsIgnoreCase("vstoupil") || text.containsIgnoreCase("opustil"))
         && text.containsIgnoreCase(client.login) => true
       case _ => false
-    }
+    }   */ //docasne vypnout, at vim coto dela
+    */
 
     //pokud je nejaka nova zprava od nas, resetovat idler
-    //if (newMessages exists { _.from === client.login }) idlerReset
+    if (newMessages exists { _.from === client.login }) idlerReset
 
     //provest idler checkout (jestli nebyla prekrocena doba neaktivity)
     //pokud ano, poslat . na kanal a zaroven oznameni klientovi
-    /*idlerCheckout {
+    idlerCheckout {
       Gate ! ((client,"PRIVMSG #"+id+" :"+idlerString))
       client ! MessageEvent(SystemMessage(0,"#"+id,"Idler:"+idlerString))
-    } */
+    }
 
     //odeslat nove zpravy klientovi + odfiltrovat zpravy, ktere pochazi od nas
     for (message <- newMessages if message.from !== client.login) {
