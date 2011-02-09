@@ -1,0 +1,31 @@
+===========
+LideCzIRC
+===========
+
+IRC brana pro chat lide.cz napsana v jazyce Scala (http://www.scala-lang.org/)
+
+Pozadavky
+===========
+  * Scala (2.8.1 nebo vyssi) - http://www.scala-lang.org/downloads
+  * Java (1.6.0_22 nebo vyssi) - http://www.java.com/en/download/index.jsp
+
+Linux
+=======
+
+Preklad:
+$ ./compile.sh
+
+(Pokud dostanete hlasku "Could not connect to compilation daemon.", spustte to jeste jednou)
+
+Spusteni:
+$ ./run.sh
+
+Ostatni OS
+============
+Prozatim metodou "Do It Yourself" (pokud mate vlastni skript pro svuj OS, ktery zde chybi,
+muzete mi ho poslat)
+
+=======
+Autor
+=======
+Antonin Brettsnajdr (svetylk0ZavinacSeznamTeckaCz)
