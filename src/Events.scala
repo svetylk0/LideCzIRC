@@ -1,5 +1,4 @@
 import Queries.Response
-
 /**
  * Created by IntelliJ IDEA.
  * Author: svetylk0@seznam.cz
