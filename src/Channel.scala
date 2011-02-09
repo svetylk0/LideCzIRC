@@ -127,6 +127,7 @@ class Channel(val id: String,
     applyPrivileges(userList, privileges) { (u,privilege) =>
       //ignorovat prechody DS -> SS a SS -> DS
       (u.mod, privilege) match {
+        case (Admin,_) => //ignorovat
         case (SS,DS) => //ignorovat
         case (DS,SS) => //ignorovat
         case _ => client ! PrivilegeChangeEvent(u, this, u.mod, privilege)

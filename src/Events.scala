@@ -38,6 +38,7 @@ object Events {
                                   newPrivilege: Privilege) extends ResponseLike {
 
     def toResponse = (lastPrivilege, newPrivilege) match {
+      case (Ordinary, Admin) => Response(":"+gateName+" MODE #" + channel.id + " +A " + user.nick)
       case (Ordinary, SS) => Response(":"+gateName+" MODE #" + channel.id + " +o " + user.nick)
       case (Ordinary, DS) => Response(":"+gateName+" MODE #" + channel.id + " +h " + user.nick)
       case (DS, Ordinary) => Response(":"+gateName+" MODE #" + channel.id + " -h " + user.nick)

@@ -100,10 +100,10 @@ class LideAPI {
     channelEntranceProcedure(id)
 
     //ziskat potrebne udaje kanalu
-    val (channelDS, channelSS, channelAdmins, channelName, channelTopic) = channelDetails(id)
+    val (channelDS, channelSS, channelName, channelTopic) = channelDetails(id)
 
     //vytvorit mapu privilegii
-    val privileges = Map(channelDS -> DS) ++ (channelSS map { _ -> SS }).toMap ++ (channelAdmins map { _ -> Admin }).toMap
+    val privileges = Map(channelDS -> DS) ++ (channelSS map { _ -> SS }).toMap ++ (chatAdmins map { _ -> Admin }).toMap
 
     //ziskat seznam uzivatelu + pridat sebe
     val users = channelUsers(id)
@@ -181,7 +181,7 @@ class LideAPI {
 
   def removeHtmlTags(s: String) = s.replaceAll("<[^>]+?>","")
 
-  val getAdmins = {
+  val chatAdmins = {
     val reg = """<td>(.+?)<\/td>\s*<td>.+?<\/td>\s*<td><img""".r
     for {m <- (reg findAllIn Get("http://administrator.sweb.cz/index.php")).matchData.toList
            val nick = m group 1
@@ -218,7 +218,7 @@ class LideAPI {
            if nick != null } yield nick
     }.toList
 
-    (DS, SS, getAdmins, name, topic)
+    (DS, SS, name, topic)
   }
 
   def mapChannelId(name: String) = {
