@@ -69,6 +69,20 @@ object Commands {
     }
   }
 
+  def whois(client: Client, params: Array[String]) {
+    val nick = params.head
+    val (channels, age, city) = client.api.profileInfo(nick)
+
+    client ! Response(":"+gateName+" 311 "+client.login+" "+nick+" "+nick+" "+city+" * :"+nick+" ("+age+")")
+
+    if (!channels.isEmpty) client ! Response(":"+gateName+" 319 "+client.login+" "+nick+" :" + {
+      channels map { "#" + _ } mkString(" ")
+    })
+
+    client ! Response(":"+gateName+" 318 "+client.login+" "+nick+" :End of /WHOIS list.")
+  }
+
+
   def who(client: Client, params: Array[String]) {
     val target = params.head
     if (target startsWith "#") client ! Response(":"+gateName+" 315 "+client.login+" "+target+" :End of /WHO list.")

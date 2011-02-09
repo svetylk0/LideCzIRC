@@ -18,8 +18,8 @@ object Gate extends Actor {
   import Commands._
 
   def act {
-    loop{
-      react{
+    loop {
+      react {
         //Raw zprava od klienta
         case (client: Client, line: String) =>
           //fault-tolerant -- "nechme to spadnout, protoze to stejne jednou spadne"
@@ -38,6 +38,11 @@ object Gate extends Actor {
               case "NICK" => //prihlaseni necham jako blokujici, protoze meni stav klienta (promennou login)
                 nick(client, middleParameters)
               case "WHO" => who(client,middleParameters)
+
+              case "WHOIS" => actor {
+                whois(client,middleParameters)
+              }
+
               case "MODE" => actor {
                 mode(client, middleParameters)
               }

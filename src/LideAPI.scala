@@ -22,16 +22,17 @@ class LideAPI {
   //konstanty
   val LoginFormUrl = "https://login.szn.cz/loginProcess"
   val LideChatUrl = "http://chat.lide.cz/"
-
-  //vyjimka (jako metoda)
-  def ChannelContentUrlPattern(id: String, lastId: String) =
-    LideChatUrl+"room.fcgi?akce=win_js&room_ID="+id+"&auth=&last="+lastId+"&"+round(random*9999d)
-
   val ChannelTextUrlPattern = "http://chat.lide.cz/room.fcgi?akce=text&auth=&skin=&m=1&room_ID="
   val ChannelEntranceUrlPattern = "http://chat.lide.cz/room.fcgi?auth=&room_ID="
   val ChannelInfoUrlPattern = "http://chat.lide.cz/room.fcgi?akce=info&auth=&room_ID="
   val ChannelDetailsUrlPattern = "http://chat.lide.cz/index.fcgi?akce=info_room&auth=&room_ID="
   val ChatUrl = "http://chat.lide.cz/"
+
+  //vyjimky (formou metod)
+  def ChannelContentUrlPattern(id: String, lastId: String) =
+    LideChatUrl+"room.fcgi?akce=win_js&room_ID="+id+"&auth=&last="+lastId+"&"+round(random*9999d)
+
+  def ProfileUrl(nick: String) = "http://profil.lide.cz/"+nick+"/profil/"
 
   //promenne
   //pro kazde id kanalu budeme ukladat c1time
@@ -295,6 +296,33 @@ class LideAPI {
     }
 
     (c2time,hashId)
+  }
+
+
+  def profileInfo(nick: String) = {
+    val ChannelsOnlineReg = """<a.+?href="http://chat.lide.cz/room.fcgi\?auth=&room_ID=(\d+)" >.+?</a>""".r
+    val AgeReg = """<p class="age">[\S\s]+?<span.+?>(\d+)\s+let[\S\s]+?</p>""".r
+    val CityReg = """<p class="age">[\S\s]+?<\/span>[\S\s]+?, (.+)[\S\s]+?</strong>\s*</p>""".r
+
+    val response = Get(ProfileUrl(nick))
+
+    val channels = (ChannelsOnlineReg findAllIn response).matchData.toList map {
+      _ group 1
+    }
+
+    val age = AgeReg findFirstMatchIn response match {
+      case Some(m) => (m group 1)+" let"
+      case None => "vek neuveden"
+    }
+
+    val city = {
+      CityReg findFirstMatchIn response match {
+        case Some(m) => m group 1
+        case None => "mesto neni uvedeno"
+      }
+    } replaceAll (" ","_")
+
+    (channels, age, city)
   }
 
   def sendMessage(id: String, message: String) {
