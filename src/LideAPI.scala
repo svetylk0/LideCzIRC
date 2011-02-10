@@ -180,8 +180,6 @@ class LideAPI {
     }          */
   }
 
-  def removeHtmlTags(s: String) = s.replaceAll("<[^>]+?>","")
-
   val chatAdmins = {
     val reg = """<td>(.+?)<\/td>\s*<td>.+?<\/td>\s*<td><img""".r
     for {m <- (reg findAllIn Get("http://administrator.sweb.cz/index.php")).matchData.toList
@@ -298,11 +296,13 @@ class LideAPI {
     (c2time,hashId)
   }
 
+  def removeHtmlTags(s: String) = s.replaceAll("<[^>]+?>","")
 
   def profileInfo(nick: String) = {
     val ChannelsOnlineReg = """<a.+?href="http://chat.lide.cz/room.fcgi\?auth=&room_ID=(\d+)" >.+?</a>""".r
     val AgeReg = """<p class="age">[\S\s]+?<span.+?>(\d+)\s+let[\S\s]+?</p>""".r
     val CityReg = """<p class="age">[\S\s]+?<\/span>[\S\s]+?, (.+)[\S\s]+?</strong>\s*</p>""".r
+    val StateReg = """<p class="online">\s*<span>(.+?)<.span>\s*(.+?)\s*<.p>""".r
 
     val response = Get(ProfileUrl(nick))
 
@@ -322,7 +322,12 @@ class LideAPI {
       }
     } replaceAll (" ","_")
 
-    (channels, age, city)
+    val state = StateReg findFirstMatchIn response match {
+      case Some(m) => (m group 1)+" "+removeHtmlTags(m group 2)
+      case None => "nepodarilo se nacist stav"
+    }
+
+    (channels, state, age, city)
   }
 
   def sendMessage(id: String, message: String) {
