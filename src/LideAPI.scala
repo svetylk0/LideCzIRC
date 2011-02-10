@@ -1,6 +1,7 @@
 import math.{random,round}
 import java.net.URLEncoder.encode
 import util.matching.Regex
+import scala.xml.Utility.Escapes.escMap
 
 /**
  * Created by IntelliJ IDEA.
@@ -136,7 +137,7 @@ class LideAPI {
     channelContentUrlMap += id -> {
       channelContentUrlReg findFirstMatchIn response match {
         case Some(m) => LideChatUrl + (m group 1)
-        case None => //C1timeParseFailure
+        case None => //
           ""
       }
     }
@@ -240,6 +241,12 @@ class LideAPI {
 
   def parseLinks(s: String) = linksReg replaceAllIn (s, _ group 1)
 
+ 
+  def unescape(s: String, map: List[(Char,String)] = escMap.toList): String = map match {
+    case (ch,str) :: tail => unescape(s.replaceAll(str,ch.toString),tail)
+    case Nil => s
+  }
+
   def firstMessagesUrl(id: String) = {
     val reg = """<FRAME NAME="win" SRC="(room.fcgi\?akce=win_js&auth=&room_ID=\d+&m=1&\d+\.\d+)""".r
     reg findFirstMatchIn Get(ChannelEntranceUrlPattern + id) match {
@@ -265,7 +272,8 @@ class LideAPI {
     //prevod na objekty zprav
     (channelMessageReg findAllIn response).matchData map { m =>
       //parsovani smajliku do textove formy
-      val message = parseLinks(parseSmileys(m group 2))
+      //parsovat linky a HTML znaky
+      val message = unescape(parseLinks(parseSmileys(m group 2)))
 
       //messageId, from, to
       (m group 1, m group 3, m group 4) match {

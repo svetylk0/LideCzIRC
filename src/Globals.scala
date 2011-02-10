@@ -12,4 +12,6 @@ object Globals {
   val gateName = "Gate"
 
   val userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.14) Gecko/2009090216 Ubuntu/9.04 (jaunty) Firefox/3.0.14"
+
+  val ignoreList = List("Seznam.cz")
 }

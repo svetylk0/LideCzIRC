@@ -194,7 +194,10 @@ class Channel(val id: String,
   def processNewMessages(list: List[Message]) {
 
     //zpravy by mely chodit pouze nove ... prozatim vypneme
-    val newMessages = list
+    //filtrovat nicky z ignorelistu
+    val newMessages = list filterNot { 
+      msg => ignoreList exists { _ === msg.from } 
+    }
     /*
     //vybrat nove zpravy
     val newMessages = list filter {
