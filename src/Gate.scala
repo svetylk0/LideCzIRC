@@ -46,6 +46,11 @@ object Gate extends Actor {
               case "MODE" => actor {
                 mode(client, middleParameters)
               }
+
+              case "LIST" => actor {
+                list(client)
+              }
+
               case "JOIN" => actor {
                 join(client, middleParameters)
               }

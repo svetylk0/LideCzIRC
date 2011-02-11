@@ -1,6 +1,6 @@
 import math.{random,round}
 import java.net.URLEncoder.encode
-import util.matching.Regex
+import actors.Futures.future
 import scala.xml.Utility.Escapes.escMap
 
 /**
@@ -27,6 +27,7 @@ class LideAPI {
   val ChannelEntranceUrlPattern = "http://chat.lide.cz/room.fcgi?auth=&room_ID="
   val ChannelInfoUrlPattern = "http://chat.lide.cz/room.fcgi?akce=info&auth=&room_ID="
   val ChannelDetailsUrlPattern = "http://chat.lide.cz/index.fcgi?akce=info_room&auth=&room_ID="
+  val CategoryUrlPattern = "http://chat.lide.cz/index.fcgi?akce=rooms&auth=&category_ID="
   val ChatUrl = "http://chat.lide.cz/"
 
   //vyjimky (formou metod)
@@ -38,30 +39,34 @@ class LideAPI {
   //promenne
   //pro kazde id kanalu budeme ukladat c1time
   var c1timeMap = Map[String,String]()
-  var lastIdMap = Map[String,String]()
   //po kazdem refreshi ulozit Url pro nacteni zprav
   var channelContentUrlMap = Map[String,String]()
+  var lastIdMap = Map[String,String]()
   //URL pro odchod z kanalu
   var leavingUrlMap = Map[String,String]()
 
   //regularni vyrazy
-  val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
-  val linksReg = """<a[^>]+?>(\S+?)<\/a>""".r
-  val channelMapReg = "room.fcgi\\?auth=&room_ID=(\\d+)\" title=\"Vstoupit\">([^<]+)</a>".r
-  val lastIdReg = """top.last_ID=(\d+);</script>""".r
-  val loginUrlReg = """href="([^"]+)""".r
-  val leavingUrlReg = """room.fcgi\?akce=odejit&room_ID=[0-9]+&auth=&hashId=[0-9]+""".r
+  val ageReg = """<p class="age">[\S\s]+?<span.+?>(\d+)\s+let[\S\s]+?</p>""".r
+  val cityReg = """<p class="age">[\S\s]+?<\/span>[\S\s]+?, (.+)[\S\s]+?</strong>\s*</p>""".r
   val c1timeReg = """cfg.c1time\s*=\s*"(\d+)""".r
   val c2timeReg = """\"c2time" VALUE="([0-9]+)\"""".r
   val hashIdReg = """=\"hashId\" value=\"([0-9]+)\"""".r
   val channelContentUrlReg = """<FRAME NAME="win" SRC="(room.fcgi\?akce=win_js&auth=&room_ID=\d+&m=1&\d+.\d+)""".r
+  val channelDsReg = """Aktuální správce:[\S\s]+?<td>\s+([\S\s]+?)\s+?<\/td""".r
+  val channelMapReg = "room.fcgi\\?auth=&room_ID=(\\d+)\" title=\"Vstoupit\">([^<]+)</a>".r
   val channelMessageReg = """top.a4\((\d+),'\w*','([^']+)','([^']*)','([^']*)'""".r
   val channelNameReg = """Místnost:\s*<span class="red">([^<]+)</span>""".r
-  val channelTopicReg = """<strong>Popis:</strong></td>\s*\n\s*<td>\s*\n\s*((\S| )+)""".r
-  val channelDsReg = """Aktuální správce:[\S\s]+?<td>\s+([\S\s]+?)\s+?<\/td""".r
+  val channelsOnlineReg = """<a.+?href="http://chat.lide.cz/room.fcgi\?auth=&room_ID=(\d+)" >.+?</a>""".r
+  val channelsReg = """<strong><a href="room.fcgi\?auth=&room_ID=(\d+)">(.+?)<.a><.strong>[\S\s]+?<td class="center w">(\d+)""".r
   val channelSsReg = """href="http://profil.lide.cz/([^/]+)/profil/" target="_blank">[^<]+</a>,""".r
+  val channelTopicReg = """<strong>Popis:</strong></td>\s*\n\s*<td>\s*\n\s*((\S| )+)""".r
+  val lastIdReg = """top.last_ID=(\d+);</script>""".r
+  val leavingUrlReg = """room.fcgi\?akce=odejit&room_ID=[0-9]+&auth=&hashId=[0-9]+""".r
+  val linksReg = """<a[^>]+?>(\S+?)<\/a>""".r
+  val loginUrlReg = """href="([^"]+)""".r
+  val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
+  val stateReg = """<p class="online">\s*<span>(.+?)<.span>\s*(.+?)\s*<.p>""".r
   val userListReg = """<OPTION VALUE="\d+"\s*>(\S+)\s*\((m|ž)\)""".r
-
   def login(username: String, password: String, domain: String) {
 
     val data = Map(
@@ -307,35 +312,42 @@ class LideAPI {
   def removeHtmlTags(s: String) = s.replaceAll("<[^>]+?>","")
 
   def profileInfo(nick: String) = {
-    val ChannelsOnlineReg = """<a.+?href="http://chat.lide.cz/room.fcgi\?auth=&room_ID=(\d+)" >.+?</a>""".r
-    val AgeReg = """<p class="age">[\S\s]+?<span.+?>(\d+)\s+let[\S\s]+?</p>""".r
-    val CityReg = """<p class="age">[\S\s]+?<\/span>[\S\s]+?, (.+)[\S\s]+?</strong>\s*</p>""".r
-    val StateReg = """<p class="online">\s*<span>(.+?)<.span>\s*(.+?)\s*<.p>""".r
-
     val response = Get(ProfileUrl(nick))
 
-    val channels = (ChannelsOnlineReg findAllIn response).matchData.toList map {
+    val channels = (channelsOnlineReg findAllIn response).matchData.toList map {
       _ group 1
     }
 
-    val age = AgeReg findFirstMatchIn response match {
+    val age = ageReg findFirstMatchIn response match {
       case Some(m) => (m group 1)+" let"
       case None => "vek neuveden"
     }
 
     val city = {
-      CityReg findFirstMatchIn response match {
+      cityReg findFirstMatchIn response match {
         case Some(m) => m group 1
         case None => "mesto neni uvedeno"
       }
     } replaceAll (" ","_")
 
-    val state = StateReg findFirstMatchIn response match {
+    val state = stateReg findFirstMatchIn response match {
       case Some(m) => (m group 1)+" "+removeHtmlTags(m group 2)
       case None => "nepodarilo se nacist stav"
     }
 
     (channels, state, age, city)
+  }
+
+  def channelList = {
+    val listOfResponses = for(id <- 1 to 8) yield future {
+      Get(CategoryUrlPattern+id)
+    }
+
+    val data = listOfResponses map { _() } mkString
+
+    (channelsReg findAllIn data).matchData.toList map { m =>
+      (m group 1, m group 2, m group 3)
+    }
   }
 
   def sendMessage(id: String, message: String) {

@@ -14,7 +14,7 @@ object Commands {
   import Globals.gateName
 
   //regularni vyrazy
-  val RawMessage = """:?(\w+)([^:]+):?([^\n\r]+)?""".r
+  val RawMessage = """:?(\w+)([^:]+)?:?([^\n\r]+)?""".r
   val NickReg = """([^@]+)(@(\S+))?""".r
   val RoomNameReg = """#(\S+)""".r
   val RoomIdReg = """(\d+)""".r
@@ -22,7 +22,7 @@ object Commands {
 
   def getMiddleParameters(p: String) = {
     val reg = """\S+""".r
-    reg findAllIn p toArray
+    if (p == null) Array[String]() else reg findAllIn p toArray
   }
 
   def welcomeMessageResponse(nick: String) = {
@@ -61,10 +61,24 @@ object Commands {
     }
   }
 
-  def mode(client: Client, params: Array[String]) {
-    val (id, mode, target) = (params(0) drop 1, params(1), params(2))
+  def list(client: Client) {
+    val channels = client.api.channelList
+    val nickname = client.login
+
+    channels foreach {
+      case (id, name, userCount) =>
+        client ! Response(":lide.cz 322 " + nickname + " #" + id + " " + userCount + " :" + name)
+      case _ =>
+    }
+
+    client ! Response(":lide.cz 323 " + nickname + " :End of /LIST")
+  }
+
+  def mode(client: Client, p: Array[String]) {
+    val params = p.lift
+    val (id, mode, target) = (params(0).getOrElse("#") drop 1, params(1), params(2))
     mode match {
-      case "+o" => client.api.sendMessage(id, "/admin "+target)
+      case Some("+o") => client.api.sendMessage(id, "/admin "+target)
       case _ => //tise ignorovat
     }
   }
