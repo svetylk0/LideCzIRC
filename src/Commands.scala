@@ -85,18 +85,20 @@ object Commands {
 
   def whois(client: Client, params: Array[String]) {
     val nick = params.head
-    val (channels, state, age, city) = client.api.profileInfo(nick)
+    val (state, age, city, items) = client.api.profileInfo(nick)
 
     client ! Response(":"+gateName+" 311 "+client.login+" "+nick+" "+nick+" "+city+" * :"+nick+" ("+age+")")
 
-    if (!channels.isEmpty) client ! Response(":"+gateName+" 319 "+client.login+" "+nick+" :" + {
+    for (Some((p,v)) <- items) client ! Response(":"+gateName+" 319 "+client.login+" "+nick+" :"+p+" "+v)
+
+    /*if (!channels.isEmpty) client ! Response(":"+gateName+" 319 "+client.login+" "+nick+" :" + {
       channels map { "#" + _ } mkString(" ")
     }) else {
       client ! Response(":"+gateName+" 319 "+client.login+" "+nick+" :"+state)
     }
 
     client ! Response(":"+gateName+" 319 "+client.login+" "+nick+" :Profil: "+client.api.ProfileUrl(nick))
-
+      */
     client ! Response(":"+gateName+" 318 "+client.login+" "+nick+" :End of /WHOIS list.")
   }
 

@@ -54,12 +54,19 @@ object Gate extends Actor {
               case "JOIN" => actor {
                 join(client, middleParameters)
               }
+
               case "PART" => actor {
                 part(client, middleParameters)
               }
+
               case "KICK" => actor {
                 privmsg(client, middleParameters, "/kick "+tailParameter)
               }
+
+              case "QUIT" => client.channels foreach {
+                _ ! ChannelPart
+              }
+
               case "PRIVMSG" => actor {
                 privmsg(client, middleParameters, tailParameter)
               }

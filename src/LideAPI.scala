@@ -314,9 +314,17 @@ class LideAPI {
   def profileInfo(nick: String) = {
     val response = Get(ProfileUrl(nick))
 
-    val channels = (channelsOnlineReg findAllIn response).matchData.toList map {
-      _ group 1
-    }
+    val items = List(
+      (channelsOnlineReg findAllIn response).matchData.toList map {
+        _ group 1
+      } match {
+        case Nil => None
+        case x => Some("Online v:",x map { "#" + _ } mkString(" "))
+      },
+
+      Some("Profil:",ProfileUrl(nick))
+    )
+
 
     val age = ageReg findFirstMatchIn response match {
       case Some(m) => (m group 1)+" let"
@@ -335,7 +343,7 @@ class LideAPI {
       case None => "nepodarilo se nacist stav"
     }
 
-    (channels, state, age, city)
+    (state, age, city, items)
   }
 
   def channelList = {
