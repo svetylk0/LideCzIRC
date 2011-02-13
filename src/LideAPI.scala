@@ -60,13 +60,16 @@ class LideAPI {
   val channelsReg = """<strong><a href="room.fcgi\?auth=&room_ID=(\d+)">(.+?)<.a><.strong>[\S\s]+?<td class="center w">(\d+)""".r
   val channelSsReg = """href="http://profil.lide.cz/([^/]+)/profil/" target="_blank">[^<]+</a>,""".r
   val channelTopicReg = """<strong>Popis:</strong></td>\s*\n\s*<td>\s*\n\s*((\S| )+)""".r
+  val lastActiveReg = """<span>Aktivní:<.span>\s*(.+?)\s*<.p>""".r
   val lastIdReg = """top.last_ID=(\d+);</script>""".r
   val leavingUrlReg = """room.fcgi\?akce=odejit&room_ID=[0-9]+&auth=&hashId=[0-9]+""".r
   val linksReg = """<a[^>]+?>(\S+?)<\/a>""".r
   val loginUrlReg = """href="([^"]+)""".r
+  val mottoReg = """<h4>Motto<.h4>\s*<p>([\S\s]+?)<.p>""".r
   val smileyReg = """<img src=".+?smiles/([^.]+).gif" alt="(.+?)" height="\d+" width="\d+" />""".r
   val stateReg = """<p class="online">\s*<span>(.+?)<.span>\s*(.+?)\s*<.p>""".r
   val userListReg = """<OPTION VALUE="\d+"\s*>(\S+)\s*\((m|ž)\)""".r
+
   def login(username: String, password: String, domain: String) {
 
     val data = Map(
@@ -176,14 +179,7 @@ class LideAPI {
         case (nick, "ž") => User(nick, Female)
         case (nick, _) => User(nick, Male)
       }
-    } toList /*match {
-      case x if x.size == 0 =>
-        //jestli je seznam uzivatelu prazdny - neco je spatne
-        //zkusime part&join
-        Gate ! PartAndJoin(id, this)
-        Nil
-      case x => x
-    }          */
+    } toList
   }
 
   val chatAdmins = {
@@ -314,12 +310,24 @@ class LideAPI {
   def profileInfo(nick: String) = {
     val response = Get(ProfileUrl(nick))
 
+    //zparsujeme nektere udaje z profilu ... pokud udaj neni nalezen, dany prvek
+    //Listu bude typu None
     val items = List(
       (channelsOnlineReg findAllIn response).matchData.toList map {
         _ group 1
       } match {
         case Nil => None
         case x => Some("Online v:",x map { "#" + _ } mkString(" "))
+      },
+
+      lastActiveReg findFirstMatchIn response match {
+        case Some(m) => Some("Aktivni:",m group 1)
+        case None => None
+      },
+
+      mottoReg findFirstMatchIn response match {
+        case Some(m) => Some("Motto:",m group 1)
+        case None => None
       },
 
       Some("Profil:",ProfileUrl(nick))

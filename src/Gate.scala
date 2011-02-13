@@ -1,7 +1,5 @@
 import actors.Actor._
-import actors.{OutputChannel, Actor}
-import java.net.Socket
-
+import actors.Actor
 /**
  * Created by IntelliJ IDEA.
  * Author: svetylk0@seznam.cz
@@ -87,13 +85,6 @@ object Gate extends Actor {
         case ChannelStateRefresh(ch) => actor {
           ch ! ch.client.api.channelState(ch.id)
         }
-
-        //part&join kanalu
-//        case PartAndJoin(id, api) => actor {
-//          api.partChannel(id)
-          //channel state naprazdno
-//          api.channelState(id)
-//        }
 
         case _ => //vse ostatni zahodit
       }
