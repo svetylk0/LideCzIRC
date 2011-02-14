@@ -61,6 +61,10 @@ object Gate extends Actor {
                 privmsg(client, middleParameters, "/kick "+tailParameter)
               }
 
+              case "ADMINS" => actor {
+                client ! systemNoticeResponse(client.login, "Admini online: "+client.api.onlineAdmins.mkString(", "))
+              }
+
               case "QUIT" => client.channels foreach {
                 _ ! ChannelPart
               }

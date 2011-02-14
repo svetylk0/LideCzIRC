@@ -183,11 +183,29 @@ class LideAPI {
     } toList
   }
 
+  def isOnline(nick: String) = future {
+    val response = Get(ProfileUrl(nick))
+    (channelsOnlineReg findAllIn response).matchData.toList map {
+        _ group 1
+      } match {
+        case Nil => false
+        case x => true
+      }
+  }
+
+  def onlineAdmins = {
+    val onlineList = for (nick <- chatAdmins) yield (nick, isOnline(nick))
+
+    onlineList.toList filter { case (nick,online) => online() } map {
+      case (nick,_) => nick
+    }
+  }
+
   val chatAdmins = {
     val reg = """<td>(.+?)<\/td>\s*<td>.+?<\/td>\s*<td><img""".r
-    for {m <- (reg findAllIn Get("http://administrator.sweb.cz/index.php")).matchData.toList
-           val nick = m group 1
-           if nick != null } yield nick
+    for { m <- (reg findAllIn Get("http://administrator.sweb.cz/index.php")).matchData.toList
+          val nick = m group 1
+          if nick != null } yield nick
   }
 
   def channelDetails(id: String) = {
