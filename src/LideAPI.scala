@@ -24,6 +24,7 @@ class LideAPI {
   val LoginFormUrl = "https://login.szn.cz/loginProcess"
   val LideChatUrl = "http://chat.lide.cz/"
   val ChannelTextUrlPattern = "http://chat.lide.cz/room.fcgi?akce=text&auth=&skin=&m=1&room_ID="
+  val ChannelTextPostUrlPattern = "http://chat.lide.cz/room.fcgi?"
   val ChannelEntranceUrlPattern = "http://chat.lide.cz/room.fcgi?auth=&room_ID="
   val ChannelInfoUrlPattern = "http://chat.lide.cz/room.fcgi?akce=info&auth=&room_ID="
   val ChannelDetailsUrlPattern = "http://chat.lide.cz/index.fcgi?akce=info_room&auth=&room_ID="
@@ -388,6 +389,6 @@ class LideAPI {
     )
 
     //Odeslat zpravu
-    Post(ChannelTextUrlPattern + "?" + c1timeMap(id), data)
+    Post(ChannelTextPostUrlPattern + c1timeMap(id), data)
   }
 }
