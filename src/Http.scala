@@ -19,12 +19,12 @@ class Http(userAgent: String,
 
   var cookies = Map[String, String]()
 
-  private def loadCookies(conn: URLConnection) = for ((name, value) <- cookies)
-    conn.setRequestProperty("Cookie", name + "=" + value)
+  private def loadCookies(conn: URLConnection) {
+    for ((name, value) <- cookies) conn.setRequestProperty("Cookie", name + "=" + value)
+  }
 
   private def saveCookies(conn: URLConnection) {
-    val f = conn.getHeaderFields
-    f.lift("Set-Cookie") match {
+    conn.getHeaderFields.lift("Set-Cookie") match {
       case Some(cList) => cList foreach { c =>
         val (name,value) = c span { _ != '=' }
         cookies += name -> (value drop 1)

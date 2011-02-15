@@ -15,6 +15,20 @@ object Gate extends Actor {
   import Queries._
   import Commands._
 
+  def guardedActor(client: Client)(f: => Unit) {
+    actor {
+      guarded(client)(f)
+    }
+  }
+
+  def guarded(client: Client)(f: => Unit) {
+    try {
+      f
+    } catch {
+      case e: Exception => client ! systemNoticeResponse(client.login,"Nastala chyba: "+e.getMessage)
+    }
+  }
+
   def act {
     loop {
       react {
@@ -37,31 +51,31 @@ object Gate extends Actor {
                 nick(client, middleParameters)
               case "WHO" => who(client,middleParameters)
 
-              case "WHOIS" => actor {
+              case "WHOIS" => guardedActor(client) {
                 whois(client,middleParameters)
               }
 
-              case "MODE" => actor {
+              case "MODE" => guardedActor(client) {
                 mode(client, middleParameters)
               }
 
-              case "LIST" => actor {
+              case "LIST" => guardedActor(client) {
                 list(client)
               }
 
-              case "JOIN" => actor {
+              case "JOIN" => guardedActor(client) {
                 join(client, middleParameters)
               }
 
-              case "PART" => actor {
+              case "PART" => guardedActor(client) {
                 part(client, middleParameters)
               }
 
-              case "KICK" => actor {
+              case "KICK" => guardedActor(client) {
                 privmsg(client, middleParameters, "/kick "+tailParameter)
               }
 
-              case "ADMINS" => actor {
+              case "ADMINS" => guardedActor(client) {
                 client ! systemNoticeResponse(client.login, "Admini online: "+client.api.onlineAdmins.mkString(", "))
               }
 
@@ -69,9 +83,10 @@ object Gate extends Actor {
                 _ ! ChannelPart
               }
 
-              case "PRIVMSG" => actor {
+              case "PRIVMSG" => guardedActor(client) {
                 privmsg(client, middleParameters, tailParameter)
               }
+
               case _ => client ! systemNoticeResponse(client.login,"Neznamy prikaz: "+command+" ("+line+")")
             }
 
