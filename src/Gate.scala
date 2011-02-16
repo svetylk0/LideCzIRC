@@ -9,11 +9,12 @@ import actors.Actor
  */
 
 object Gate extends Actor {
+  import Queries._
+  import Responses._
+  import Commands._
+
   //spustime Gate aktera hned ze startu
   start
-
-  import Queries._
-  import Commands._
 
   def guardedActor(client: Client)(f: => Unit) {
     actor {
@@ -25,7 +26,8 @@ object Gate extends Actor {
     try {
       f
     } catch {
-      case e: Exception => client ! systemNoticeResponse(client.login,"Nastala chyba: "+e.getMessage)
+//      case e: Exception => client ! systemNoticeResponse(client.login, "Nastala chyba: "+e.getMessage)
+      case e: Exception => client ! errorResponse("Nastala chyba: "+e.getMessage)
     }
   }
 

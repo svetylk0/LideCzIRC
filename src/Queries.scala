@@ -22,8 +22,6 @@ object Queries {
 
   //obecne dotazy
 
-  //odpovedi pro klienta
-  case class Response(item: String)
 
   //odpovedi, ktere dostava Channel od Gate
   case class ChannelState(name: String,

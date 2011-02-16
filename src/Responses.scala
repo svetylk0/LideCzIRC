@@ -5,7 +5,12 @@
  * Time: 11:38
  */
 
+
+//odpovedi pro klienta
+case class Response(item: String)
+
 object Responses {
+  import Globals._
 
   val accessDeniedReg = """"<P>Byl jste vykopnut.+<span class=\"red\">.+</span></P> <P>Vzkazuje.+<span class=\"red\">.+</span></P>""".r
 
@@ -16,5 +21,13 @@ object Responses {
       case None =>
     }
   }
+
+  private def response(kind: String, from: String, target: String, content: String = "") = Response(":"+from+" "+kind+" "+target+" :"+content)
+  //private def numericResponse(num: Int)
+
+  def errorResponse(msg: String) = Response("ERROR :"+msg)
+
+  def noticeResponse(from: String, to: String, text: String) = response("NOTICE", from, to, text)
+  def systemNoticeResponse(to: String, text: String) = noticeResponse(gateName, to, text)
 
 }

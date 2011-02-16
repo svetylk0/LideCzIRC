@@ -25,6 +25,7 @@ class AccessDeniedException(s: String) extends SelfThrowingException(s)
  * Vyjimka obecneho selhani.
  */
 object Failure extends SelfThrowingException("Doslo k selhani nektere z komponent.")
+object PrivmsgFailure extends SelfThrowingException("Odeslani zpravy na kanal selhalo.")
 
 object LoginErrorException extends SelfThrowingException("Chybny login nebo heslo.")
 

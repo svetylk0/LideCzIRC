@@ -1,4 +1,5 @@
-import Queries.Response
+import Globals._
+
 /**
  * Created by IntelliJ IDEA.
  * Author: svetylk0@seznam.cz
@@ -11,8 +12,7 @@ trait ResponseLike {
 }
 
 object Events {
-  import Commands._
-  import Globals._
+  import Responses._
 
   //udalosti, ktere jsou odesilany klientovi
   case class JoinEvent(user: User, channel: Channel) extends ResponseLike {
@@ -23,8 +23,8 @@ object Events {
     def toResponse = Response(":" + user +" PART :#" + channel.id)
   }
 
-  case class MessageEvent(message: Message) extends ResponseLike {
-    def toResponse = message.toResponse
+  case class MessageEvent(x: Message) extends ResponseLike {
+    def toResponse = x.toResponse
   }
 
   case class VoiceUserEvent(user: User, channel: Channel) extends ResponseLike {

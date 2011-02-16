@@ -9,8 +9,8 @@ import util.matching.Regex.Match
  */
 
 object Commands {
-  import actors.Actor._
   import Queries._
+  import Responses._
   import Globals.gateName
 
   //regularni vyrazy
@@ -165,11 +165,12 @@ object Commands {
         (client.channels.head.id, "/m "+params.head+" "+msg)
       }
 
-    client.api.sendMessage(id,message)
+    try {
+      client.api.sendMessage(id,message)
+    } catch {
+      case e => PrivmsgFailure
+    }
   }
 
-  def noticeResponse(from: String, to: String, text: String) = response("NOTICE", from, to, text)
-  def systemNoticeResponse(to: String, text: String) = noticeResponse(gateName, to, text)
 
-  private def response(kind: String, from: String, target: String, content: String = "") = Response(":"+from+" "+kind+" "+target+" :"+content)
 }
