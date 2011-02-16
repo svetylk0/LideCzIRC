@@ -168,7 +168,7 @@ object Commands {
     try {
       client.api.sendMessage(id,message)
     } catch {
-      case e => PrivmsgFailure
+      case e: Exception => client ! Response("ERROR :Nepodarilo se odeslat zpravu: "+msg)
     }
   }
 
