@@ -11,6 +11,9 @@ import java.net.ServerSocket
 object LideCzIRC {
 
   def main(args: Array[String]) {
+    
+    if (args contains "-v") Debug.verboseEnabled = true
+    
     val server = new ServerSocket(6667)
     println("Nasloucham na portu 6667 ...")
 

@@ -8,7 +8,7 @@
  */
 
 object Debug {
-  var verboseEnabled = true
+  var verboseEnabled = false
   var debugEnabled = false
 
   def verbose(f: => Unit) {
