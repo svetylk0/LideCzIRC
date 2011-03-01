@@ -11,7 +11,7 @@ object Globals {
   val encoding = "UTF-8"
   val gateName = "Gate"
 
-  val userAgent = "Mozilla/5.0 (X11; U; Linux i686; cs; rv:1.8.0.7) Gecko/20060909 Firefox/1.5.0.7"
+  val userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10"
 
   val ignoreList = List("Seznam.cz","4U magazine")
 }
